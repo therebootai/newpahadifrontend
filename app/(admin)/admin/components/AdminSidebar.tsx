@@ -133,8 +133,8 @@ export default function AdminSidebar() {
         fixed inset-y-0 left-0 lg:sticky lg:top-0
         ${isMobileOpen ? 'flex translate-x-0' : 'hidden lg:flex -translate-x-full lg:translate-x-0'}
         flex-col
-        ${isCollapsed ? 'lg:w-20' : 'lg:w-[260px]'}
-        w-[260px]
+        ${isCollapsed ? 'lg:w-20' : 'lg:w-65'}
+        w-65
       `}
     >
       {/* Logo & Toggle */}
@@ -163,7 +163,7 @@ export default function AdminSidebar() {
             </p>
           ) : (
             <div className="flex justify-center mb-2">
-              <div className="w-6 h-[1px] bg-border" />
+              <div className="w-6 h-px bg-border" />
             </div>
           )}
           <nav className="space-y-1">{mainMenu.map(renderNavItem)}</nav>

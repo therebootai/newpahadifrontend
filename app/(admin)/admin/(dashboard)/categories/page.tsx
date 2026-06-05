@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Search, 
   Plus, 
@@ -15,7 +16,8 @@ import {
   Loader2,
   Check,
   Lock,
-  Unlock
+  Unlock,
+  Package
 } from 'lucide-react';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { 
@@ -47,6 +49,7 @@ const categorySchema = z.object({
 });
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   
@@ -406,6 +409,14 @@ export default function CategoriesPage() {
           </td>
           <td className="px-6 py-4 text-right">
             <div className="flex items-center justify-end gap-2">
+              <button 
+                onClick={() => router.push(`/admin/products/list?categoryId=${category._id}`)}
+                className="p-1.5 text-brand hover:bg-brand/5 rounded-lg transition-all flex items-center gap-1.5"
+                title="View Products in this category"
+              >
+                <Package size={16} />
+                <span className="text-[10px] font-bold uppercase hidden xl:inline">Products</span>
+              </button>
               <button 
                 onClick={() => handleEdit(category)}
                 className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"

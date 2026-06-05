@@ -38,12 +38,14 @@ import {
 import { useBrands } from '@/lib/hooks/useBrands';
 import { useCategories } from '@/lib/hooks/useCategories';
 import { useWarehouses } from '@/lib/hooks/useWarehouses';
-import { useVariants, useToggleVariantStatus, useUpdateVariant, Variant } from '@/lib/hooks/useVariants';
+import { useVariants, useToggleVariantStatus, useUpdateVariant, useDeleteVariant, Variant } from '@/lib/hooks/useVariants';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { toast } from 'sonner';
 
 export default function ProductManagementPage() {
+// ... rest of component stays same
+
   const router = useRouter();
 
   // List State
@@ -301,9 +303,33 @@ function ProductRow({ product, onEdit, onDelete, onToggle, onQuickEdit }: any) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { data: variants, isLoading: isVariantsLoading } = useVariants(isExpanded ? product.id : '');
   const toggleVariantMutation = useToggleVariantStatus();
+  const deleteVariantMutation = useDeleteVariant();
 
   const categoryName = product.categoryId?.name || 'Category';
   const brandName = product.brandId?.name || 'Brand';
+
+  const handleDeleteVariant = async (variant: Variant) => {
+    const totalVariants = variants?.length || 0;
+    let confirmMessage = `Are you sure you want to delete the variant "${variant.title}"? This action cannot be undone.`;
+    
+    if (totalVariants <= 1) {
+      confirmMessage = `This is the LAST variant for this product. Deleting it will automatically UNPUBLISH the product and reset its price to 0. Proceed?`;
+    } else if (variant.isDefault) {
+      confirmMessage = `The variant "${variant.title}" is currently the DEFAULT. If you delete it, another variant will automatically become the new default. Proceed?`;
+    }
+
+    const confirm = window.confirm(confirmMessage);
+    if (!confirm) return;
+
+    const loadingId = toast.loading('Deleting variant...');
+    try {
+      await deleteVariantMutation.mutateAsync({ id: variant.id, productId: product.id });
+      toast.success('Variant deleted successfully', { id: loadingId });
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to delete variant';
+      toast.error(message, { id: loadingId });
+    }
+  };
 
   return (
     <>
@@ -502,18 +528,27 @@ function ProductRow({ product, onEdit, onDelete, onToggle, onQuickEdit }: any) {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right">
-                               <button
-                                  onClick={() => toggleVariantMutation.mutate({ id: v.id, productId: product.id })}
-                                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none ${
-                                    v.isActive ? 'bg-brand' : 'bg-gray-300'
-                                  }`}
-                                >
-                                  <span
-                                    className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${
-                                      v.isActive ? 'translate-x-4' : 'translate-x-0.5'
+                               <div className="flex items-center justify-end gap-2">
+                                 <button
+                                    onClick={() => handleDeleteVariant(v)}
+                                    className="p-1 text-[#FF6B6B] hover:bg-red-50 rounded transition-colors"
+                                    title="Delete Variant"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => toggleVariantMutation.mutate({ id: v.id, productId: product.id })}
+                                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none ${
+                                      v.isActive ? 'bg-brand' : 'bg-gray-300'
                                     }`}
-                                  />
-                                </button>
+                                  >
+                                    <span
+                                      className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${
+                                        v.isActive ? 'translate-x-4' : 'translate-x-0.5'
+                                      }`}
+                                    />
+                                  </button>
+                               </div>
                             </td>
                           </tr>
                         );

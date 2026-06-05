@@ -12,21 +12,26 @@ export interface OrderTaxDetail {
 
 export interface OrderItem {
   _id?: string;
-  variantId?: string;
-  title: string;
-  sku: string;
-  coverImage: string;
-  price?: number;
-  subtotal?: number;
-  effectiveSubtotal?: number;
+  variantId: string;
+  snapshot: {
+    productId: string;
+    title: string;
+    coverImage: string;
+    sku: string;
+    attributes?: Record<string, string>;
+    returnPolicyType?: 'REPLACE' | 'RETURN' | 'BOTH' | 'NONE';
+    returnWindowDays?: number;
+  };
+  title?: string;
+  coverImage?: string;
   quantity: number;
-  discountApportioned?: number;
-  effectivePrice?: number;
-  taxDetails?: OrderTaxDetail[];
-  totalTax?: number;
+  price: number;
+  subtotal: number;
   itemTotal: number;
+  effectivePrice?: number;
   attributes?: Record<string, string>;
-  itemStatus?: 'active' | 'return_requested' | 'returned' | 'replacement_requested' | 'replaced';
+  slug?: string;
+  itemStatus: string;
 }
 
 export interface ShippingAddress {
@@ -46,12 +51,15 @@ export interface OrderShipment {
   trackingNumber?: string;
   labelUrl?: string;
   trackUrl?: string;
-  trackingData?: {
-    trackStatus: string;
-    currentStatus: string;
-    statusSteps: Array<{ status: string; date: string }>;
-    eta?: string;
-  };
+  currentStatus?: string;
+  estimatedDelivery?: string;
+  timeline?: Array<{
+    activity: string;
+    location: string;
+    date: string;
+    time: string;
+  }>;
+  trackingData?: any;
 }
 
 export interface Order {
@@ -77,6 +85,21 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface ReturnRequest {
+  _id: string;
+  orderId: string;
+  itemId: string;
+  userId: any;
+  type: 'return' | 'replace';
+  reason: string;
+  customerComment?: string;
+  pickupAddress: any;
+  status: 'requested' | 'approved' | 'rejected' | 'pickup_scheduled' | 'item_received' | 'resolved';
+  refundStatus: string;
+  refundAmount?: number;
+  createdAt: string;
+}
+
 export interface OrderListResponse {
   orders: Order[];
   pagination: {
@@ -97,13 +120,13 @@ export type OrderStatusType =
   | 'payment_failed'
   | 'payment_expired';
 
+export interface TrackResponse {
+  shipments: OrderShipment[];
+}
+
 export interface UpdateStatusData {
   orderStatus: OrderStatusType;
   comment?: string;
-}
-
-export interface TrackResponse {
-  shipments: OrderShipment[];
 }
 
 // ============================================================================
@@ -131,6 +154,11 @@ export const orderApi = {
     return response.data.data;
   },
 
+  confirmPartial: async (id: string, items: { itemId: string; quantity: number }[]): Promise<any> => {
+    const response = await adminApi.post(`/orders/${id}/confirm-partial`, { items });
+    return response.data;
+  },
+
   dispatch: async (id: string): Promise<Order> => {
     const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/dispatch`);
     return response.data.data;
@@ -149,35 +177,53 @@ export const orderApi = {
     return response.data.data;
   },
 
-  returnApprove: async (id: string, data?: { adminComment?: string }): Promise<Order> => {
-    const response = await adminApi.patch<{ data: Order; message: string }>(
-      `/orders/${id}/return/approve`,
-      data || {}
-    );
+  getInvoice: async (id: string): Promise<{ invoiceUrl: string }> => {
+    const response = await adminApi.get<{ data: { invoiceUrl: string } }>(`/shiprocket/orders/${id}/invoice`);
     return response.data.data;
   },
 
-  returnReject: async (id: string, data: { reason: string }): Promise<Order> => {
-    const response = await adminApi.patch<{ data: Order; message: string }>(
-      `/orders/${id}/return/reject`,
-      data
-    );
+  cancelAdmin: async (id: string, reason: string): Promise<Order> => {
+    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/cancel/admin`, {
+      reason,
+    });
     return response.data.data;
   },
 
-  returnReceived: async (id: string, data?: { adminComment?: string }): Promise<Order> => {
-    const response = await adminApi.patch<{ data: Order; message: string }>(
-      `/orders/${id}/return/received`,
-      data || {}
-    );
+  refund: async (id: string, data: { reason?: string }): Promise<Order> => {
+    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/refund`, data);
+    return response.data.data;
+  },
+};
+
+export const returnApi = {
+  list: async (params?: { page?: number; limit?: number; status?: string }): Promise<any> => {
+    const response = await adminApi.get('/returns', { params });
+    return response.data.data;
+  },
+  
+  getByItemId: async (itemId: string): Promise<ReturnRequest | null> => {
+    const response = await adminApi.get('/returns', { params: { itemId } });
+    const requests = response.data.data.requests || [];
+    return requests.length > 0 ? requests[0] : null;
+  },
+
+  approve: async (id: string, data?: { adminComment?: string }): Promise<any> => {
+    const response = await adminApi.patch(`/returns/${id}/approve`, data || {});
     return response.data.data;
   },
 
-  returnRefund: async (id: string, data: { reason?: string }): Promise<Order> => {
-    const response = await adminApi.patch<{ data: Order; message: string }>(
-      `/orders/${id}/return/refund`,
-      data
-    );
+  reject: async (id: string, data: { reason: string }): Promise<any> => {
+    const response = await adminApi.patch(`/returns/${id}/reject`, data);
+    return response.data.data;
+  },
+
+  received: async (id: string, data?: { adminComment?: string }): Promise<any> => {
+    const response = await adminApi.patch(`/returns/${id}/received`, data || {});
+    return response.data.data;
+  },
+
+  resolve: async (id: string, data: { refundMethod: 'razorpay' | 'manual'; manualReference?: string; adminNotes?: string }): Promise<any> => {
+    const response = await adminApi.patch(`/returns/${id}/resolve`, data);
     return response.data.data;
   },
 };
@@ -199,6 +245,38 @@ export const shopOrderApi = {
 
   track: async (id: string): Promise<TrackResponse> => {
     const response = await shopApi.get<{ data: TrackResponse }>(`/orders/me/${id}/track`);
+    return response.data.data;
+  },
+
+  cancel: async (id: string, reason: string): Promise<Order> => {
+    const response = await shopApi.patch<{ data: Order; message: string }>(`/orders/me/${id}/cancel`, {
+      reason,
+    });
+    return response.data.data;
+  },
+
+  getInvoice: async (id: string): Promise<{ invoiceUrl: string }> => {
+    const response = await shopApi.get<{ data: { invoiceUrl: string } }>(`/shiprocket/orders/${id}/invoice`);
+    return response.data.data;
+  },
+
+  createReturnRequest: async (data: {
+    orderId: string;
+    itemId: string;
+    type: 'return' | 'replace';
+    reason: string;
+    customerComment?: string;
+    pickupAddress: {
+      fullName: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      postalCode: string;
+    };
+  }): Promise<any> => {
+    const response = await shopApi.post<{ data: any; message: string }>('/returns', data);
     return response.data.data;
   },
 };

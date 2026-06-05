@@ -84,7 +84,7 @@ export default function AdminGuard({
 
     if (isAdminAuth) {
       if (isLoginPage) {
-        router.replace('/admin/dashboard');
+        router.replace('/admin/orders');
       }
     } else {
       if (!isLoginPage) {

@@ -19,17 +19,16 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
-import { orderApi, Order, formatOrderDate, formatCurrency, ORDER_STATUS_COLORS } from '@/lib/api/orders';
+import { orderApi, returnApi, Order, OrderStatusType, formatOrderDate, formatCurrency, ORDER_STATUS_COLORS } from '@/lib/api/orders';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 // ============================================================================
-// Types - Map API response to UI expectations
+// Types - Map API response to UI format
 // ============================================================================
 
-type OrderStatusType = 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'payment_failed' | 'payment_expired';
-
 interface UIOrderItem {
+  id: string;
   title: string;
   image: string;
   price: string;
@@ -37,6 +36,7 @@ interface UIOrderItem {
   effectivePrice?: number;
   quantity: number;
   attributes: Record<string, string>;
+  itemStatus: string;
   _idx: number;
   _uniqueKey: string;
 }
@@ -45,6 +45,7 @@ interface UIOrder {
   id: string;
   orderId: string;
   customer: string;
+  customerPhone: string;
   date: string;
   status: string;
   statusRaw: string;
@@ -56,6 +57,7 @@ interface UIOrder {
   itemTax?: number;
   shippingCost?: number;
   isConfirmed?: boolean;
+  paymentStatus?: string;
   items: UIOrderItem[];
 }
 
@@ -108,26 +110,30 @@ function transformOrder(apiOrder: Order, index: number): UIOrder {
   return {
     id: apiOrder._id || `order-${index}`,
     orderId: apiOrder.orderId || `#${apiOrder._id?.slice(0, 2).toUpperCase()}${apiOrder._id?.slice(-2).toUpperCase() || 'XX'}`,
-    customer: `${apiOrder.customerPhone} (${apiOrder.customerName})`,
+    customer: apiOrder.customerName || 'Unknown',
+    customerPhone: apiOrder.customerPhone || 'N/A',
     date: formatOrderDate(apiOrder.createdAt),
     status: STATUS_LABELS[statusKey] || statusRaw,
     statusRaw: statusKey,
     statusColor: STATUS_COLORS[statusKey] || 'text-brand-dark',
     payment: apiOrder.paymentMethod || 'Online',
-    totalAmount: apiOrder.totalAmount,
-    subtotal: apiOrder.subtotal,
-    couponDiscount: apiOrder.couponDiscount,
-    itemTax: apiOrder.itemTax,
-    shippingCost: apiOrder.shippingCost,
+    totalAmount: apiOrder.totalAmount || 0,
+    subtotal: apiOrder.subtotal || 0,
+    couponDiscount: apiOrder.couponDiscount || 0,
+    itemTax: apiOrder.itemTax || 0,
+    shippingCost: apiOrder.shippingCost || 0,
     isConfirmed: apiOrder.isConfirmed,
+    paymentStatus: apiOrder.paymentStatus,
     items: apiOrder.items.map((item, idx) => ({
-      title: item.title,
-      image: item.coverImage || '/placeholder.png',
+      id: item._id || `${apiOrder._id}-${idx}`,
+      title: item.snapshot?.title || item.title || 'Unknown Product',
+      image: item.snapshot?.coverImage || item.coverImage || '/placeholder.png',
       price: formatCurrency(item.price),
       itemTotal: formatCurrency(item.itemTotal),
       effectivePrice: item.effectivePrice,
       quantity: item.quantity,
       attributes: item.attributes || {},
+      itemStatus: item.itemStatus || 'active',
       _idx: idx,
       _uniqueKey: `${index}-${idx}`,
     })),
@@ -137,6 +143,68 @@ function transformOrder(apiOrder: Order, index: number): UIOrder {
 // ============================================================================
 // Modals
 // ============================================================================
+
+interface RefundModalProps {
+  order: UIOrder;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isPending: boolean;
+}
+
+function RefundModal({ order, onClose, onConfirm, isPending }: RefundModalProps) {
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <RefreshCw size={18} className="text-orange-500" /> Process Refund
+          </h3>
+          <button onClick={onClose} className="text-muted hover:text-primary transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-muted">
+            Process a full refund of <span className="font-bold text-primary">{formatCurrency(order.totalAmount)}</span> via Razorpay. This cannot be reversed.
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Order ID:</span>
+              <span className="font-bold text-primary">{order.orderId}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Customer:</span>
+              <span className="font-medium text-primary">{order.customer}</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Refund Reason (Optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Cancelled by customer..."
+              className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors resize-none"
+              rows={2}
+            />
+          </div>
+        </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-muted hover:text-primary transition-colors">Cancel</button>
+          <button
+            onClick={() => onConfirm(reason)}
+            disabled={isPending}
+            className="px-6 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {isPending && <Loader2 size={16} className="animate-spin" />}
+            Confirm Refund
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface CancelModalProps {
   order: UIOrder;
@@ -238,11 +306,31 @@ function TrackModal({ order, trackingData, isLoading, onClose }: TrackModalProps
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-muted uppercase">Status</span>
-                  <span className={`text-sm font-bold ${ORDER_STATUS_COLORS[trackingData.shipments[0].trackingData?.trackStatus] || 'text-primary'}`}>
-                    {trackingData.shipments[0].trackingData?.currentStatus || 'N/A'}
+                  <span className={`text-sm font-bold ${ORDER_STATUS_COLORS[trackingData.shipments[0].currentStatus] || 'text-primary'}`}>
+                    {trackingData.shipments[0].currentStatus || 'N/A'}
                   </span>
                 </div>
               </div>
+
+              {/* Status Steps / Timeline */}
+              {trackingData.shipments[0].timeline && (
+                <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {trackingData.shipments[0].timeline.map((step: any, idx: number) => (
+                    <div key={idx} className="flex gap-4 relative">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-3 h-3 rounded-full ${idx === 0 ? 'bg-brand' : 'bg-gray-300'} z-10 shadow-sm`} />
+                        {idx !== trackingData.shipments[0].timeline.length - 1 && (
+                          <div className="w-0.5 flex-1 bg-gray-100" />
+                        )}
+                      </div>
+                      <div className="pb-4">
+                        <p className={`text-xs font-bold ${idx === 0 ? 'text-primary' : 'text-muted'}`}>{step.activity}</p>
+                        <p className="text-[10px] text-muted">{step.location !== 'Unknown' ? `${step.location} | ` : ''}{step.date} {step.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex gap-3">
                 {trackingData.shipments[0].trackUrl && (
@@ -328,10 +416,9 @@ function DispatchModal({ order, onClose, onDispatch, isPending }: DispatchModalP
           <button
             onClick={onDispatch}
             disabled={isPending}
-            className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isPending && <Loader2 size={16} className="animate-spin" />}
-            Dispatch
+            {isPending ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Dispatch'}
           </button>
         </div>
       </div>
@@ -341,78 +428,135 @@ function DispatchModal({ order, onClose, onDispatch, isPending }: DispatchModalP
 
 interface ReturnManageModalProps {
   order: UIOrder;
+  request: any;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
   onReceived: () => void;
-  onRefund: () => void;
+  onResolve: (data: { refundMethod: 'razorpay' | 'manual'; manualReference?: string }) => void;
   isPending: boolean;
-  actionType: 'approve' | 'reject' | 'received' | 'refund' | null;
+  actionType: string | null;
 }
 
-function ReturnManageModal({ order, onClose, onApprove, onReject, onReceived, onRefund, isPending, actionType }: ReturnManageModalProps) {
+function ReturnManageModal({ order, request, onClose, onApprove, onReject, onReceived, onResolve, isPending, actionType }: ReturnManageModalProps) {
+  const [refundMethod, setRefundMethod] = useState<'razorpay' | 'manual'>('razorpay');
+  const [manualRef, setManualRef] = useState('');
+
+  if (!request) return null;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-purple-50/50">
           <h3 className="font-bold text-primary flex items-center gap-2">
-            <RotateCcw size={18} className="text-purple-500" /> Manage Return
+            <RotateCcw size={18} className="text-purple-500" /> Manage {request.type === 'return' ? 'Return' : 'Replacement'}
           </h3>
           <button onClick={onClose} className="text-muted hover:text-primary transition-colors">
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 space-y-4">
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted">Order ID:</span>
-              <span className="font-bold text-primary">{order.orderId}</span>
+              <span className="text-muted font-medium">Customer:</span>
+              <span className="font-bold text-primary">{order.customer} ({order.customerPhone})</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted">Customer:</span>
-              <span className="font-medium text-primary">{order.customer}</span>
+              <span className="text-muted font-medium">Reason:</span>
+              <span className="font-bold text-red-500">{request.reason}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted">Total:</span>
-              <span className="font-bold text-[#FF6B6B]">{formatCurrency(order.totalAmount)}</span>
+            {request.customerComment && (
+              <div className="text-sm">
+                <span className="text-muted font-medium block mb-1">Customer Comment:</span>
+                <span className="text-primary bg-white p-2 rounded border border-gray-100 block">{request.customerComment}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-muted uppercase tracking-widest">Process Flow</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className={`p-3 rounded-xl border text-center transition-all ${request.status === 'requested' ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-500/20' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+                <p className="text-[10px] font-bold uppercase text-amber-600 mb-1">1. Approve</p>
+                <p className="text-[9px] text-amber-500">Review & SR Pickup</p>
+              </div>
+              <div className={`p-3 rounded-xl border text-center transition-all ${request.status === 'approved' || request.status === 'pickup_scheduled' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+                <p className="text-[10px] font-bold uppercase text-blue-600 mb-1">2. Receive</p>
+                <p className="text-[9px] text-blue-500">Mark item as back</p>
+              </div>
+              <div className={`p-3 rounded-xl border text-center transition-all ${request.status === 'item_received' ? 'border-green-500 bg-green-50 ring-2 ring-green-500/20' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+                <p className="text-[10px] font-bold uppercase text-green-600 mb-1">3. Resolve</p>
+                <p className="text-[9px] text-green-500">Refund/Replace</p>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm text-muted font-medium">Return Workflow:</p>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded font-bold">1. Approve</span>
-              <span className="text-muted">→</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded font-bold">2. Received</span>
-              <span className="text-muted">→</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded font-bold">3. Refund</span>
+          {request.status === 'item_received' && request.type === 'return' && (
+            <div className="p-4 bg-green-50 border border-green-100 rounded-xl space-y-4">
+              <p className="text-sm font-bold text-green-800">Resolution: Refund</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={() => setRefundMethod('razorpay')}
+                  className={`py-2 px-3 rounded-lg border-2 text-[10px] font-bold uppercase tracking-wider transition-all ${refundMethod === 'razorpay' ? 'border-green-500 bg-green-100 text-green-700' : 'border-white bg-white/50 text-gray-400'}`}
+                >
+                  Razorpay Auto
+                </button>
+                <button 
+                  onClick={() => setRefundMethod('manual')}
+                  className={`py-2 px-3 rounded-lg border-2 text-[10px] font-bold uppercase tracking-wider transition-all ${refundMethod === 'manual' ? 'border-green-500 bg-green-100 text-green-700' : 'border-white bg-white/50 text-gray-400'}`}
+                >
+                  Manual Entry
+                </button>
+              </div>
+              {refundMethod === 'manual' && (
+                <input 
+                  type="text" 
+                  value={manualRef}
+                  onChange={(e) => setManualRef(e.target.value)}
+                  placeholder="Reference ID / UTR Number"
+                  className="w-full bg-white border border-green-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-green-500"
+                />
+              )}
             </div>
-          </div>
+          )}
         </div>
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+          {request.status === 'requested' && (
+            <button
+              onClick={onApprove}
+              disabled={isPending}
+              className="flex-1 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-bold hover:bg-purple-600 transition-all flex items-center justify-center gap-2"
+            >
+              {isPending && actionType === 'approve' ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              Approve Request
+            </button>
+          )}
+          {(request.status === 'approved' || request.status === 'pickup_scheduled') && (
+            <button
+              onClick={onReceived}
+              disabled={isPending}
+              className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+            >
+              {isPending && actionType === 'received' ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
+              Mark as Received
+            </button>
+          )}
+          {request.status === 'item_received' && (
+            <button
+              onClick={() => onResolve({ refundMethod, manualReference: manualRef })}
+              disabled={isPending}
+              className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+            >
+              {isPending && actionType === 'resolve' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              Complete {request.type === 'return' ? 'Refund' : 'Replacement'}
+            </button>
+          )}
           <button
-            onClick={onApprove}
-            disabled={isPending || actionType === 'approve'}
-            className="flex-1 py-2 bg-purple-500 text-white rounded-lg text-sm font-bold hover:bg-purple-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            onClick={onReject}
+            disabled={isPending}
+            className="px-6 py-2.5 text-sm font-bold text-muted hover:text-red-500 transition-colors"
           >
-            {actionType === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            Approve
-          </button>
-          <button
-            onClick={onReceived}
-            disabled={isPending || actionType === 'received'}
-            className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {actionType === 'received' ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
-            Mark Received
-          </button>
-          <button
-            onClick={onRefund}
-            disabled={isPending || actionType === 'refund'}
-            className="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {actionType === 'refund' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            Refund
+            Reject
           </button>
         </div>
       </div>
@@ -437,8 +581,10 @@ export default function OrdersPage() {
   const [cancelModal, setCancelModal] = useState<UIOrder | null>(null);
   const [trackModal, setTrackModal] = useState<UIOrder | null>(null);
   const [dispatchModal, setDispatchModal] = useState<UIOrder | null>(null);
-  const [returnModal, setReturnModal] = useState<UIOrder | null>(null);
+  const [refundModal, setRefundModal] = useState<UIOrder | null>(null);
+  const [returnModal, setReturnModal] = useState<{ order: UIOrder, request: any } | null>(null);
   const [trackingData, setTrackingData] = useState<any>(null);
+  const [actionType, setActionType] = useState<string | null>(null);
 
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
   const sortModalRef = useRef<HTMLDivElement>(null);
@@ -450,7 +596,8 @@ export default function OrdersPage() {
   const { data: ordersData, isLoading, refetch } = useQuery({
     queryKey: ['orders', activeTab, currentPage],
     queryFn: async () => {
-      const response = await orderApi.list({ page: currentPage, limit: 10 });
+      const status = activeTab === 'All order' ? undefined : STATUS_TAB_MAPPING[activeTab as Exclude<TabStatus, 'All order'>][0];
+      const response = await orderApi.list({ page: currentPage, limit: 10, status });
       return response;
     },
   });
@@ -460,9 +607,6 @@ export default function OrdersPage() {
 
   // Calculate KPI totals
   const totalOrders = ordersData?.pagination?.total || 0;
-  const processingCount = uiOrders.filter(o => o.status === 'Processing').length;
-  const shippedCount = uiOrders.filter(o => o.status === 'Shipped').length;
-  const cancelledCount = uiOrders.filter(o => o.status === 'Cancelled').length;
 
   // Mutations
   const dispatchMutation = useMutation({
@@ -479,9 +623,23 @@ export default function OrdersPage() {
     },
   });
 
+  const refundMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return await orderApi.refund(id, { reason });
+    },
+    onSuccess: () => {
+      toast.success('Full refund processed successfully via Razorpay');
+      setRefundModal(null);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to process refund');
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await orderApi.updateStatus(id, { orderStatus: 'cancelled', comment: reason });
+      return await orderApi.cancelAdmin(id, reason);
     },
     onSuccess: () => {
       toast.success('Order cancelled successfully');
@@ -501,54 +659,97 @@ export default function OrdersPage() {
       setTrackingData(data);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to fetch tracking');
+      toast.error(error.response?.data?.message || 'Failed to fetch tracking data');
+    },
+  });
+
+  const invoiceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await orderApi.getInvoice(id);
+    },
+    onSuccess: (data) => {
+      if (data?.invoiceUrl) {
+        window.open(data.invoiceUrl, '_blank');
+      } else {
+        toast.error('Invoice URL not found');
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to generate invoice');
     },
   });
 
   const returnApproveMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await orderApi.returnApprove(id, {});
+      setActionType('approve');
+      return await returnApi.approve(id);
     },
     onSuccess: () => {
-      toast.success('Return approved');
+      toast.success('Return approved & Shiprocket Pickup Scheduled');
+      setReturnModal(null);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to approve return');
     },
+    onSettled: () => setActionType(null)
   });
 
   const returnReceivedMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await orderApi.returnReceived(id, {});
+      setActionType('received');
+      return await returnApi.received(id);
     },
     onSuccess: () => {
-      toast.success('Item marked as received');
+      toast.success('Item marked as received in warehouse');
+      setReturnModal(null);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to mark as received');
     },
+    onSettled: () => setActionType(null)
   });
 
-  const returnRefundMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await orderApi.returnRefund(id, {});
+  const returnResolveMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      setActionType('resolve');
+      return await returnApi.resolve(id, data);
     },
-    onSuccess: () => {
-      toast.success('Refund processed successfully');
+    onSuccess: (data: any, variables) => {
+      const type = returnModal?.request?.type || 'return';
+      toast.success(type === 'return' ? 'Refund processed successfully via Razorpay' : 'Replacement shipment created in Shiprocket');
       setReturnModal(null);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to process refund');
+      toast.error(error.response?.data?.message || 'Failed to resolve request');
     },
+    onSettled: () => setActionType(null)
   });
 
   // Handlers
   const handleTrack = (order: UIOrder) => {
     setTrackModal(order);
     trackMutation.mutate(order.id);
+  };
+
+  const handleManageReturn = async (order: UIOrder, item: UIOrderItem) => {
+    try {
+      toast.loading('Fetching return details...', { id: 'return-fetch' });
+      const request = await returnApi.getByItemId(item.id);
+      toast.dismiss('return-fetch');
+      
+      if (!request) {
+        toast.error('No return request found for this item');
+        return;
+      }
+      
+      setReturnModal({ order, request });
+    } catch (error) {
+      toast.dismiss('return-fetch');
+      toast.error('Failed to load return details');
+    }
   };
 
   const toggleOrderExpansion = (orderId: string) => {
@@ -611,7 +812,60 @@ export default function OrdersPage() {
               </button>
               {showFilterModal && (
                 <div ref={filterModalRef} className="absolute top-full right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[320px] bg-surface border border-border rounded-xl shadow-xl z-50 p-6 animate-in fade-in zoom-in-95 duration-200">
-                  {/* ... filter modal content ... */}
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-4">By Categories</h4>
+                      <div className="relative mb-3">
+                        <input
+                          type="text"
+                          placeholder="Search categories..."
+                          value={searchCategory}
+                          onChange={(e) => setSearchCategory(e.target.value)}
+                          className="w-full bg-background border border-border rounded-lg py-1.5 pl-9 pr-3 text-xs focus:outline-none focus:border-brand"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        {filteredCategories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                            className={`px-3 py-1.5 rounded-lg text-left text-xs transition-all ${selectedCategory === cat ? 'bg-brand/10 text-brand-dark font-bold border border-brand/20' : 'bg-background text-muted hover:text-primary'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-4">By Brands</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {brands.map(brand => (
+                          <button
+                            key={brand}
+                            onClick={() => setSelectedBrand(selectedBrand === brand ? '' : brand)}
+                            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${selectedBrand === brand ? 'bg-brand/10 text-brand-dark font-bold border border-brand/20' : 'bg-background text-muted hover:text-primary'}`}
+                          >
+                            {brand}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-border flex gap-3">
+                      <button
+                        onClick={() => { setSelectedCategory(null); setSelectedBrand(''); }}
+                        className="flex-1 py-2 text-xs font-bold text-muted hover:text-primary transition-colors"
+                      >
+                        Reset All
+                      </button>
+                      <button
+                        onClick={() => setShowFilterModal(false)}
+                        className="flex-1 py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-dark transition-colors"
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -626,7 +880,10 @@ export default function OrdersPage() {
               </button>
               {showSortModal && (
                 <div ref={sortModalRef} className="absolute top-full right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95 duration-100">
-                  {/* ... sort modal content ... */}
+                  <button className="w-full px-4 py-2 text-left text-xs font-medium hover:bg-background transition-colors">Newest First</button>
+                  <button className="w-full px-4 py-2 text-left text-xs font-medium hover:bg-background transition-colors">Oldest First</button>
+                  <button className="w-full px-4 py-2 text-left text-xs font-medium hover:bg-background transition-colors">Total: High to Low</button>
+                  <button className="w-full px-4 py-2 text-left text-xs font-medium hover:bg-background transition-colors">Total: Low to High</button>
                 </div>
               )}
             </div>
@@ -709,7 +966,7 @@ export default function OrdersPage() {
 
                         {/* Product Details */}
                         <div className="flex items-center gap-5">
-                          <div className="w-20 h-20 rounded-lg bg-background border border-border overflow-hidden flex-shrink-0">
+                          <div className="w-20 h-20 rounded-lg bg-background border border-border overflow-hidden shrink-0">
                             <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                           </div>
                           <div className="space-y-1">
@@ -747,12 +1004,27 @@ export default function OrdersPage() {
                             <div className={`w-2 h-2 rounded-full bg-current`} />
                             {order.status}
                           </div>
+                          {item.itemStatus !== 'active' && (
+                             <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600 rounded inline-block">
+                                {item.itemStatus.replace(/_/g, ' ')}
+                             </div>
+                          )}
                         </div>
 
                         {/* Actions */}
                         <div className="flex lg:flex-col items-center lg:items-end gap-2">
+                          {/* Item specific Return Management */}
+                          {(item.itemStatus === 'return_requested' || item.itemStatus === 'replacement_requested' || item.itemStatus === 'returned' || item.itemStatus === 'replaced') && (
+                             <button
+                                onClick={() => handleManageReturn(order, item)}
+                                className="w-full lg:w-28 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-bold hover:bg-purple-600 transition-colors flex items-center justify-center gap-1"
+                              >
+                                <RotateCcw size={12} /> Manage
+                              </button>
+                          )}
+
                           {/* Processing Actions */}
-                          {order.statusRaw === 'processing' && (
+                          {order.statusRaw === 'processing' && item.itemStatus === 'active' && (
                             <>
                               <button
                                 onClick={() => setDispatchModal(order)}
@@ -784,14 +1056,25 @@ export default function OrdersPage() {
                               >
                                 <FileText size={12} /> Label
                               </button>
+                              <button
+                                onClick={() => setCancelModal(order)}
+                                className="w-full lg:w-28 py-1.5 bg-[#FF6B6B]/10 text-[#FF6B6B] border border-[#FF6B6B]/20 rounded-lg text-xs font-bold hover:bg-[#FF6B6B]/20 transition-colors"
+                              >
+                                Cancel
+                              </button>
                             </>
                           )}
 
                           {/* Delivered Actions */}
                           {order.statusRaw === 'delivered' && (
                             <>
-                              <button className="w-full lg:w-28 py-1.5 bg-[#4EA674] text-white rounded-lg text-xs font-bold hover:bg-[#3d8c60] transition-colors flex items-center justify-center gap-1">
-                                <FileText size={12} /> Invoice
+                              <button
+                                onClick={() => invoiceMutation.mutate(order.id)}
+                                disabled={invoiceMutation.isPending}
+                                className="w-full lg:w-28 py-1.5 bg-[#4EA674] text-white rounded-lg text-xs font-bold hover:bg-[#3d8c60] transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                              >
+                                {invoiceMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                                Invoice
                               </button>
                             </>
                           )}
@@ -799,21 +1082,18 @@ export default function OrdersPage() {
                           {/* Cancelled Actions */}
                           {order.statusRaw === 'cancelled' && (
                             <>
-                              <button className="w-full lg:w-28 py-1.5 bg-[#FF6B6B] text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors flex items-center justify-center gap-1">
-                                <RefreshCw size={12} /> Refund
-                              </button>
-                            </>
-                          )}
-
-                          {/* Returned Actions */}
-                          {order.statusRaw === 'returned' && (
-                            <>
-                              <button
-                                onClick={() => setReturnModal(order)}
-                                className="w-full lg:w-28 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-bold hover:bg-purple-600 transition-colors flex items-center justify-center gap-1"
-                              >
-                                <RotateCcw size={12} /> Manage
-                              </button>
+                              {order.paymentStatus === 'refunded' ? (
+                                <div className="w-full lg:w-28 py-1.5 bg-green-50 text-green-600 border border-green-100 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1">
+                                  <Check size={10} /> Refund Completed
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => setRefundModal(order)}
+                                  className="w-full lg:w-28 py-1.5 bg-[#FF6B6B] text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
+                                >
+                                  <RefreshCw size={12} /> Refund
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -845,6 +1125,15 @@ export default function OrdersPage() {
       />
 
       {/* Modals */}
+      {refundModal && (
+        <RefundModal
+          order={refundModal}
+          onClose={() => setRefundModal(null)}
+          onConfirm={(reason) => refundMutation.mutate({ id: refundModal.id, reason })}
+          isPending={refundMutation.isPending}
+        />
+      )}
+
       {cancelModal && (
         <CancelModal
           order={cancelModal}
@@ -874,14 +1163,15 @@ export default function OrdersPage() {
 
       {returnModal && (
         <ReturnManageModal
-          order={returnModal}
+          order={returnModal.order}
+          request={returnModal.request}
           onClose={() => setReturnModal(null)}
-          onApprove={() => returnApproveMutation.mutate(returnModal.id)}
+          onApprove={() => returnApproveMutation.mutate(returnModal.request._id)}
           onReject={() => {}}
-          onReceived={() => returnReceivedMutation.mutate(returnModal.id)}
-          onRefund={() => returnRefundMutation.mutate(returnModal.id)}
-          isPending={returnApproveMutation.isPending || returnReceivedMutation.isPending || returnRefundMutation.isPending}
-          actionType={returnApproveMutation.isPending ? 'approve' : returnReceivedMutation.isPending ? 'received' : returnRefundMutation.isPending ? 'refund' : null}
+          onReceived={() => returnReceivedMutation.mutate(returnModal.request._id)}
+          onResolve={(data) => returnResolveMutation.mutate({ id: returnModal.request._id, data })}
+          isPending={returnApproveMutation.isPending || returnReceivedMutation.isPending || returnResolveMutation.isPending}
+          actionType={actionType}
         />
       )}
     </div>

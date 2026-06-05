@@ -12,34 +12,232 @@ import {
   FiArrowLeft,
   FiClock,
   FiCheckCircle,
-  FiAlertCircle
+  FiAlertCircle,
+  FiXCircle,
+  FiFileText,
+  FiLoader
 } from "react-icons/fi";
 import { shopOrderApi, Order, ORDER_STATUS_LABELS, formatOrderDate, formatCurrency } from "@/lib/api/orders";
 import { toast } from "sonner";
+import ConfirmModal from "./ConfirmModal";
+
+interface ReturnModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (data: any) => void;
+  item: any;
+  pickupAddress: any;
+  isPending: boolean;
+}
+
+function ReturnModal({ isOpen, onClose, onConfirm, item, pickupAddress, isPending }: ReturnModalProps) {
+  const policyType = item.snapshot?.returnPolicyType || 'BOTH';
+  const [type, setType] = useState<'return' | 'replace'>(policyType === 'REPLACE' ? 'replace' : 'return');
+  const [reason, setReason] = useState('');
+  const [comment, setComment] = useState('');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">Return/Replace Item</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+            <FiXCircle size={20} className="text-gray-400" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          {/* Item Info */}
+          <div className="flex gap-4 p-3 bg-gray-50 rounded-xl">
+            <div className="relative h-16 w-16 rounded-lg overflow-hidden border border-gray-100 bg-white shrink-0">
+              <Image src={item.coverImage || "/placeholder.png"} alt={item.title} fill className="object-cover" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 line-clamp-1">{item.title}</p>
+              <p className="text-xs text-gray-500 mt-1">Quantity: {item.quantity}</p>
+              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mt-1">Policy: {policyType}</p>
+            </div>
+          </div>
+
+          {/* Request Type */}
+          {(policyType === 'BOTH' || policyType === 'RETURN' || policyType === 'REPLACE') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">What do you want?</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(policyType === 'BOTH' || policyType === 'RETURN') && (
+                  <button 
+                    onClick={() => setType('return')}
+                    className={`py-3 rounded-xl border-2 font-bold text-xs uppercase tracking-wider transition-all ${
+                      type === 'return' ? 'border-amber-500 bg-amber-50 text-amber-600' : 'border-gray-100 text-gray-400 hover:border-gray-200'
+                    }`}
+                  >
+                    Return & Refund
+                  </button>
+                )}
+                {(policyType === 'BOTH' || policyType === 'REPLACE') && (
+                  <button 
+                    onClick={() => setType('replace')}
+                    className={`py-3 rounded-xl border-2 font-bold text-xs uppercase tracking-wider transition-all ${
+                      type === 'replace' ? 'border-amber-500 bg-amber-50 text-amber-600' : 'border-gray-100 text-gray-400 hover:border-gray-200'
+                    }`}
+                  >
+                    Replacement
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reason */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Reason</label>
+            <select 
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition-colors"
+            >
+              <option value="">Select a reason</option>
+              <option value="Damaged Product">Product received is damaged</option>
+              <option value="Wrong Item">Received the wrong item</option>
+              <option value="Quality Issue">Quality not as expected</option>
+              <option value="Size/Fit Issue">Size or fit issue</option>
+              <option value="Defective">Manufacturing defect</option>
+            </select>
+          </div>
+
+          {/* Additional Details */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Additional Details (Optional)</label>
+            <textarea 
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Tell us more about the issue..."
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              rows={3}
+            />
+          </div>
+
+          {/* Pickup Address Confirmation */}
+          <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+            <div className="flex items-center gap-2 text-blue-600 mb-2">
+              <FiMapPin size={14} />
+              <p className="text-[10px] font-bold uppercase tracking-widest">Pickup Address</p>
+            </div>
+            <p className="text-xs text-blue-900 leading-relaxed">
+              {pickupAddress.fullName}<br />
+              {pickupAddress.addressLine1}, {pickupAddress.city}, {pickupAddress.state} {pickupAddress.postalCode}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
+          <button 
+            disabled={isPending}
+            onClick={onClose}
+            className="flex-1 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-100 transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button 
+            disabled={isPending || !reason}
+            onClick={() => onConfirm({ type, reason, customerComment: comment })}
+            className="flex-1 py-3 bg-[#222222] text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[#333333] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isPending ? <FiLoader className="animate-spin" /> : 'Submit Request'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const OrderDetailsPage = () => {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [invoicing, setInvoicing] = useState(false);
+
+  // Return Modal State
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [returning, setReturning] = useState(false);
+
+  const fetchOrder = async () => {
+    try {
+      const orderId = params.id as string;
+      if (!orderId) return;
+      const data = await shopOrderApi.getById(orderId);
+      setOrder(data);
+    } catch (error) {
+      console.error("Failed to fetch order details", error);
+      toast.error("Could not load order details");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const orderId = params.id as string;
-        if (!orderId) return;
-        const data = await shopOrderApi.getById(orderId);
-        setOrder(data);
-      } catch (error) {
-        console.error("Failed to fetch order details", error);
-        toast.error("Could not load order details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrder();
   }, [params.id]);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    setCancelling(true);
+    try {
+      await shopOrderApi.cancel(order._id, "Cancelled by user from order details page");
+      toast.success("Order cancelled successfully");
+      setShowCancelModal(false);
+      fetchOrder();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    setInvoicing(true);
+    try {
+      const data = await shopOrderApi.getInvoice(order._id);
+      if (data.invoiceUrl) {
+        window.open(data.invoiceUrl, "_blank");
+      } else {
+        toast.error("Invoice not available yet");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to fetch invoice");
+    } finally {
+      setInvoicing(false);
+    }
+  };
+
+  const handleReturnSubmit = async (data: any) => {
+    if (!order || !selectedItem) return;
+    setReturning(true);
+    try {
+      await shopOrderApi.createReturnRequest({
+        orderId: order._id,
+        itemId: selectedItem._id,
+        type: data.type,
+        reason: data.reason,
+        customerComment: data.customerComment,
+        pickupAddress: order.shippingAddress!
+      });
+      toast.success(`${data.type === 'return' ? 'Return' : 'Replacement'} request submitted!`);
+      setShowReturnModal(false);
+      fetchOrder();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit request");
+    } finally {
+      setReturning(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -80,6 +278,27 @@ const OrderDetailsPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {order.orderStatus === 'delivered' && (
+            <button 
+              onClick={handleDownloadInvoice}
+              disabled={invoicing}
+              className="px-4 py-2 bg-green-600 text-white rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {invoicing ? <FiLoader className="animate-spin" /> : <FiFileText />}
+              Invoice
+            </button>
+          )}
+
+          {(order.orderStatus === 'processing' || order.orderStatus === 'pending_payment' || order.orderStatus === 'shipped') && (
+            <button 
+              onClick={() => setShowCancelModal(true)}
+              className="px-4 py-2 bg-white border border-red-100 text-red-600 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-red-50 transition-colors"
+            >
+              <FiXCircle />
+              Cancel Order
+            </button>
+          )}
+
           <div className={`px-4 py-2 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
             order.orderStatus === 'delivered' ? 'bg-green-50 border-green-100 text-green-600' :
             order.orderStatus === 'cancelled' ? 'bg-red-50 border-red-100 text-red-600' :
@@ -106,31 +325,52 @@ const OrderDetailsPage = () => {
                 const image = item.snapshot?.coverImage || item.coverImage;
                 
                 return (
-                  <div key={idx} className="p-4 flex gap-4">
-                    <Link 
-                      href={`/product/${item.snapshot?.slug || item.slug || "#"}`}
-                      className="relative h-20 w-20 rounded-md overflow-hidden border border-gray-100 bg-gray-50 shrink-0 transition-opacity hover:opacity-80"
-                    >
-                      <Image
-                        src={image || "https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop"}
-                        alt={title}
-                        fill
-                        className="object-cover"
-                      />
-                    </Link>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <Link href={`/product/${item.snapshot?.slug || item.slug || "#"}`} className="hover:text-amber-600 transition-colors">
-                        <h3 className="font-bold text-gray-900 text-[13px] line-clamp-1 mb-1">{title}</h3>
+                  <div key={idx} className="p-4 flex flex-col gap-4">
+                    <div className="flex gap-4">
+                      <Link 
+                        href={`/product/${item.snapshot?.slug || item.slug || "#"}`}
+                        className="relative h-20 w-20 rounded-md overflow-hidden border border-gray-100 bg-gray-50 shrink-0 transition-opacity hover:opacity-80"
+                      >
+                        <Image
+                          src={image || "https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop"}
+                          alt={title}
+                          fill
+                          className="object-cover"
+                        />
                       </Link>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qty: {item.quantity}</p>
-                        {(item.attributes || item.snapshot?.attributes) && Object.entries(item.attributes || item.snapshot?.attributes).map(([k, v]: any) => (
-                          <p key={k} className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded">
-                            {k}: {v}
-                          </p>
-                        ))}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <Link href={`/product/${item.snapshot?.slug || item.slug || "#"}`} className="hover:text-amber-600 transition-colors">
+                          <h3 className="font-bold text-gray-900 text-[13px] line-clamp-1 mb-1">{title}</h3>
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qty: {item.quantity}</p>
+                          {(item.attributes || item.snapshot?.attributes) && Object.entries(item.attributes || item.snapshot?.attributes).map(([k, v]: any) => (
+                            <p key={k} className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded">
+                              {k}: {v}
+                            </p>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-sm font-bold text-amber-600">{formatCurrency(item.price)}</p>
+                          
+                          {/* Item Status / Return Action */}
+                          {item.itemStatus !== 'active' ? (
+                            <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-gray-100 text-gray-500 rounded">
+                              {item.itemStatus.replace(/_/g, ' ')}
+                            </span>
+                          ) : order.orderStatus === 'delivered' && (
+                            <button 
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setShowReturnModal(true);
+                              }}
+                              className="text-[10px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 transition-colors"
+                            >
+                              Return/Replace
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm font-bold text-amber-600 mt-2">{formatCurrency(item.price)}</p>
                     </div>
                   </div>
                 );
@@ -165,26 +405,33 @@ const OrderDetailsPage = () => {
                       )}
                     </div>
                     
-                    {shipment.trackingData?.currentStatus && (
+                    {shipment.currentStatus && (
                       <div className="space-y-3 px-2">
                         <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
                           <FiCheckCircle className="text-green-500 shrink-0" />
-                          <span>Status: <strong className="text-gray-900">{shipment.trackingData.currentStatus}</strong></span>
+                          <span>Status: <strong className="text-gray-900">{shipment.currentStatus}</strong></span>
                         </div>
+
+                        {shipment.estimatedDelivery && (
+                          <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
+                            <FiClock className="text-amber-500 shrink-0" />
+                            <span>Est. Delivery: <strong className="text-gray-900">{shipment.estimatedDelivery}</strong></span>
+                          </div>
+                        )}
                         
-                        {shipment.trackingData.statusSteps && shipment.trackingData.statusSteps.length > 0 && (
-                          <div className="mt-4 space-y-4 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-100">
-                            {shipment.trackingData.statusSteps.map((step, stepIdx) => (
+                        {shipment.timeline && shipment.timeline.length > 0 && (
+                          <div className="mt-4 space-y-4 relative before:absolute before:left-1.75 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
+                            {shipment.timeline.map((step: any, stepIdx: number) => (
                               <div key={stepIdx} className="flex gap-4 relative">
                                 <div className={`w-4 h-4 rounded-full border-4 border-white shrink-0 z-10 ${
                                   stepIdx === 0 ? "bg-amber-500" : "bg-gray-300"
                                 } shadow-sm mt-1`} />
                                 <div>
                                   <p className={`text-xs font-bold ${stepIdx === 0 ? "text-gray-900" : "text-gray-500"}`}>
-                                    {step.status}
+                                    {step.activity}
                                   </p>
                                   <p className="text-[10px] font-medium text-gray-400">
-                                    {new Date(step.date).toLocaleString()}
+                                    {step.location !== 'Unknown' ? `${step.location} | ` : ''}{step.date} {step.time}
                                   </p>
                                 </div>
                               </div>
@@ -285,6 +532,28 @@ const OrderDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancelOrder}
+        title="Cancel Order"
+        message="Are you sure you want to cancel this order? This action cannot be undone."
+        confirmText="Yes, Cancel"
+        cancelText="No, Keep It"
+        isLoading={cancelling}
+      />
+
+      {selectedItem && (
+        <ReturnModal
+          isOpen={showReturnModal}
+          onClose={() => setShowReturnModal(false)}
+          onConfirm={handleReturnSubmit}
+          item={selectedItem}
+          pickupAddress={order.shippingAddress}
+          isPending={returning}
+        />
+      )}
     </div>
   );
 };

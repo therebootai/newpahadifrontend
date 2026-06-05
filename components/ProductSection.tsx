@@ -44,14 +44,14 @@ const ProductSection = async () => {
       {/* Latest Collections Section */}
       {latestProducts.length > 0 && (
         <div className="space-y-6">
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-center">
             <div>
               <p className="text-3xl font-bold">Latest Collections</p>
               <div className="h-1 w-20 bg-brand mt-2 rounded-full" />
             </div>
             <Link 
               href="/category/all-jewellery"
-              className="text-brand font-bold text-sm hover:underline"
+              className="text-brand font-bold text-sm hover:underline mb-2"
             >
               View All
             </Link>

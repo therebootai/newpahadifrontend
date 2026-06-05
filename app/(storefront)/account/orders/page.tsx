@@ -7,12 +7,13 @@ import { useOrderStore } from "@/lib/store/useOrderStore";
 import { useCartStore } from "@/lib/store/useCartStore";
 import { useRouter } from "next/navigation";
 import ReviewModal from "@/components/ReviewModal";
+import Pagination from "@/components/admin/Pagination";
 import { toast } from "sonner";
 import { shopApi } from "@/lib/fetchers";
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { orders, isLoading, fetchOrders } = useOrderStore();
+  const { orders, isLoading, pagination, fetchOrders } = useOrderStore();
   const addItem = useCartStore((state) => state.addItem);
   const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -20,6 +21,11 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  const handlePageChange = (page: number) => {
+    fetchOrders({ page });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleBuyAgain = (order: any) => {
     try {
@@ -132,17 +138,17 @@ export default function OrdersPage() {
                 {/* Order Body */}
                 <div className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
+                    <div className="flex gap-4">
                       <Link 
                         href={`/product/${firstItem?.snapshot?.slug || firstItem?.slug || "#"}`}
                         className="w-20 h-20 rounded-lg bg-[#F5F5F5] p-2 flex-shrink-0 transition-opacity hover:opacity-80"
                       >
-                        <img src={firstItem?.snapshot.coverImage || "/images/placeholder.png"} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                        <img src={firstItem?.coverImage || firstItem?.snapshot?.coverImage || "/images/placeholder.png"} alt="" className="w-full h-full object-contain mix-blend-multiply" />
                       </Link>
                       <div>
                         <Link href={`/product/${firstItem?.snapshot?.slug || firstItem?.slug || "#"}`} className="hover:text-amber-600 transition-colors">
                           <h3 className="text-base font-bold text-[#222222] mb-0.5 line-clamp-1">
-                            {firstItem?.snapshot.title || "Product Name"}
+                            {firstItem?.title || firstItem?.snapshot?.title || "Product Name"}
                             {itemsCount > 1 && <span className="text-[#666666] font-medium ml-2">and {itemsCount - 1} more...</span>}
                           </h3>
                         </Link>
@@ -199,13 +205,13 @@ export default function OrdersPage() {
                             href={`/product/${item.snapshot?.slug || item.slug || "#"}`}
                             className="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50/30 hover:bg-gray-50 transition-all hover:border-amber-200"
                           >
-                            <img src={item.snapshot.coverImage} alt="" className="w-10 h-10 object-contain mix-blend-multiply" />
+                            <img src={item.snapshot?.coverImage || "/images/placeholder.png"} alt="" className="w-10 h-10 object-contain mix-blend-multiply" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-900 truncate">{item.snapshot.title}</p>
+                              <p className="text-xs font-bold text-gray-900 truncate">{item.snapshot?.title || item.title || "Product Name"}</p>
                               <button 
                                 onClick={(e) => {
                                   e.preventDefault(); // Don't follow link if clicking review
-                                  handleWriteReview(item.snapshot.productId, item.snapshot.title, item.variantId);
+                                  handleWriteReview(item.snapshot?.productId || "", item.snapshot?.title || item.title || "Product", item.variantId);
                                 }}
                                 className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter hover:underline"
                               >
@@ -221,6 +227,18 @@ export default function OrdersPage() {
               </div>
             );
           })}
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="pt-6">
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-16 bg-[#F5F5F5] rounded-2xl border border-dashed border-[#CCCCCC]">
