@@ -9,6 +9,8 @@ import WelcomePopup from "@/components/WelcomePopup";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
 function page() {
   return (
     <div>

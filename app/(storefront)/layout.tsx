@@ -8,6 +8,8 @@ import { Toaster } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
 const futura = localFont({
   src: [
     { path: "../fonts/FuturaPTLight.otf", weight: "300", style: "normal" },

@@ -26,6 +26,7 @@ export const getRootCategories = cache(async function getRootCategories(): Promi
     });
 
     const rawData = response.data.data || [];
+    console.log("Fetched root categories:", rawData);
 
     const mapCategory = (cat: any): Category => ({
       ...cat,
