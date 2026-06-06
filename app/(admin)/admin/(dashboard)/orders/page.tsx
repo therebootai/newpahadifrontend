@@ -155,7 +155,7 @@ function RefundModal({ order, onClose, onConfirm, isPending }: RefundModalProps)
   const [reason, setReason] = useState('');
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -217,7 +217,7 @@ function CancelModal({ order, onClose, onConfirm, isPending }: CancelModalProps)
   const [reason, setReason] = useState('');
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/50">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -277,7 +277,7 @@ interface TrackModalProps {
 
 function TrackModal({ order, trackingData, isLoading, onClose }: TrackModalProps) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-brand/5">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -376,13 +376,18 @@ function TrackModal({ order, trackingData, isLoading, onClose }: TrackModalProps
 interface DispatchModalProps {
   order: UIOrder;
   onClose: () => void;
-  onDispatch: () => void;
+  onDispatch: (data: { weight: number, length: number, breadth: number, height: number }) => void;
   isPending: boolean;
 }
 
 function DispatchModal({ order, onClose, onDispatch, isPending }: DispatchModalProps) {
+  const [weight, setWeight] = useState(0.5);
+  const [length, setLength] = useState(10);
+  const [breadth, setBreadth] = useState(10);
+  const [height, setHeight] = useState(10);
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60lex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-brand/5">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -392,29 +397,70 @@ function DispatchModal({ order, onClose, onDispatch, isPending }: DispatchModalP
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-6">
           <p className="text-sm text-muted">
-            This will create a shipment with Shiprocket and generate a shipping label. Continue?
+            Configure package details for Shiprocket. Defaults are shown below.
           </p>
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted">Order ID:</span>
+
+          <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Weight (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={weight}
+                onChange={(e) => setWeight(parseFloat(e.target.value))}
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Length (cm)</label>
+                <input
+                  type="number"
+                  value={length}
+                  onChange={(e) => setLength(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm font-medium"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Breadth (cm)</label>
+                <input
+                  type="number"
+                  value={breadth}
+                  onChange={(e) => setBreadth(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm font-medium"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Height (cm)</label>
+                <input
+                  type="number"
+                  value={height}
+                  onChange={(e) => setHeight(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm font-medium"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-brand/5 rounded-lg p-3 space-y-1 border border-brand/10">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted">Order:</span>
               <span className="font-bold text-primary">{order.orderId}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs">
               <span className="text-muted">Customer:</span>
               <span className="font-medium text-primary">{order.customer}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted">Items:</span>
-              <span className="font-medium text-primary">{order.items.length}</span>
             </div>
           </div>
         </div>
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
           <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-muted hover:text-primary transition-colors">Cancel</button>
           <button
-            onClick={onDispatch}
+            onClick={() => onDispatch({ weight, length, breadth, height })}
             disabled={isPending}
             className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
           >
@@ -445,7 +491,7 @@ function ReturnManageModal({ order, request, onClose, onApprove, onReject, onRec
   if (!request) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-purple-50/50">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -610,8 +656,8 @@ export default function OrdersPage() {
 
   // Mutations
   const dispatchMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await orderApi.dispatch(id);
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      return await orderApi.dispatch(id, data);
     },
     onSuccess: () => {
       toast.success('Order dispatched successfully');
@@ -774,7 +820,7 @@ export default function OrdersPage() {
   );
 
   return (
-    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-[1600px] mx-auto">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-400 mx-auto">
       {/* Tabs and Actions */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-surface p-4 rounded-xl border border-border">
         <div className="flex items-center gap-1 bg-background p-1 rounded-lg overflow-x-auto w-full xl:w-auto scrollbar-hide">
@@ -792,7 +838,7 @@ export default function OrdersPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
-          <div className="relative flex-1 sm:min-w-[240px]">
+          <div className="relative flex-1 sm:min-w-60">
             <input
               type="text"
               placeholder="Search..."
@@ -1156,7 +1202,7 @@ export default function OrdersPage() {
         <DispatchModal
           order={dispatchModal}
           onClose={() => setDispatchModal(null)}
-          onDispatch={() => dispatchMutation.mutate(dispatchModal.id)}
+          onDispatch={(data) => dispatchMutation.mutate({ id: dispatchModal.id, data })}
           isPending={dispatchMutation.isPending}
         />
       )}

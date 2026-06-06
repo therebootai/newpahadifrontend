@@ -159,8 +159,8 @@ export const orderApi = {
     return response.data;
   },
 
-  dispatch: async (id: string): Promise<Order> => {
-    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/dispatch`);
+  dispatch: async (id: string, payload?: { weight?: number, length?: number, breadth?: number, height?: number }): Promise<Order> => {
+    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/dispatch`, payload);
     return response.data.data;
   },
 

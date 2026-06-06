@@ -47,7 +47,7 @@ export default function RootAdminLayout({
               {children}
             </AdminGuard>
           </QueryProvider>
-        </ProgressProvider>
+       </ProgressProvider>
       </body>
     </html>
   );
