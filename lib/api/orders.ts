@@ -82,6 +82,11 @@ export interface Order {
   isPartiallyConfirmed?: boolean;
   shippingAddress?: ShippingAddress;
   shipments?: OrderShipment[];
+  statusHistory?: Array<{
+    status: string;
+    timestamp: string;
+    comment?: string;
+  }>;
   items: OrderItem[];
 }
 

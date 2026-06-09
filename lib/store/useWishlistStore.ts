@@ -76,7 +76,11 @@ export const useWishlistStore = create<WishlistState>()(
           });
         }
       },
-      toggleWishlist: async (variantId, product) => {
+      toggleWishlist: async (variantIdRaw, product) => {
+        const variantId = typeof variantIdRaw === 'object' && variantIdRaw !== null
+          ? String((variantIdRaw as any)._id || (variantIdRaw as any).id || '')
+          : String(variantIdRaw || '');
+
         const { pendingToggles } = get();
 
         if (pendingToggles.has(variantId)) {

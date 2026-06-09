@@ -107,7 +107,7 @@ const ProductCard = ({
   };
 
   return (
-    <div className="group min-w-0 md:min-w-60 w-full overflow-hidden rounded-xl bg-white border border-gray-200 transition-all duration-300 hover:shadow-xl">
+    <div className="group min-w-0 w-full overflow-hidden rounded-xl bg-white border border-gray-200 transition-all duration-300 hover:shadow-xl">
 
       {/* IMAGE SECTION */}
       <Link href={href} className="relative block overflow-hidden rounded-t-xl">

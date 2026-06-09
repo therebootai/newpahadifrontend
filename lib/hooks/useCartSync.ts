@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useCartStore } from '@/lib/store/useCartStore';
 import { useCustomerStore } from '@/lib/store/useCustomerStore';
-import { cartApi } from '@/lib/api/cart';
+import { useWishlistStore } from '@/lib/store/useWishlistStore';
+import { useAddressStore } from '@/lib/store/useAddressStore';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ;
 const DEBOUNCE_MS = 1500;
@@ -41,7 +42,6 @@ export function useCartSync() {
   const syncToBackend = useCartStore(s => s.syncToBackend);
   const isAuthenticated = useCustomerStore(s => s.isAuthenticated);
 
-  const pendingSyncRef = useRef<{ variantId: string; quantity: number }[] | null>(null);
   const prevAuthRef = useRef(isAuthenticated);
 
   // --- Layer 1: Merge on Login / Clear on Logout ---
@@ -49,19 +49,17 @@ export function useCartSync() {
     if (!prevAuthRef.current && isAuthenticated) {
       // User just logged in — merge guest items with account items
       fetchAndMerge();
+      // Fetch wishlist from backend
+      useWishlistStore.getState().fetchWishlist().catch(() => {});
     } else if (prevAuthRef.current && !isAuthenticated) {
       // User just logged out — clear local cart, wishlist, and addresses for privacy/clean state
       useCartStore.setState({ items: [], isDirty: false, lastSyncedAt: null });
       
       // Clear wishlist
-      import('@/lib/store/useWishlistStore').then(mod => {
-        mod.useWishlistStore.setState({ _items: [] });
-      }).catch(() => {});
+      useWishlistStore.setState({ _items: [] });
 
       // Clear addresses
-      import('@/lib/store/useAddressStore').then(mod => {
-        mod.useAddressStore.setState({ addresses: [] });
-      }).catch(() => {});
+      useAddressStore.setState({ addresses: [] });
     }
     prevAuthRef.current = isAuthenticated;
   }, [isAuthenticated, fetchAndMerge]);
@@ -83,7 +81,8 @@ export function useCartSync() {
   useEffect(() => {
     const syncFromBackend = () => {
       if (useCustomerStore.getState().isAuthenticated) {
-        fetchCart(); // This now internally checks isDirty
+        fetchCart(); // This internally checks isDirty
+        useWishlistStore.getState().fetchWishlist().catch(() => {});
       }
     };
 
@@ -112,6 +111,7 @@ export function useCartSync() {
   useEffect(() => {
     if (useCustomerStore.getState().isAuthenticated) {
       fetchCart();
+      useWishlistStore.getState().fetchWishlist().catch(() => {});
     }
   }, []);
 }

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import logopc from "@/public/logo pc.svg";
+import logopc from "@/public/logo pc copy 2.svg";
 import {
   LayoutDashboard,
   ShoppingCart,

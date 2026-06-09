@@ -95,6 +95,15 @@ export interface VariantResponse {
   effectiveTax?: TaxDetail[];
 }
 
+function extractIdString(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return String(val._id || val.id || val.$oid || '');
+  }
+  return String(val);
+}
+
 /**
  * Reusable helper to map backend product data to frontend Product interface
  */
@@ -107,9 +116,11 @@ export function mapProduct(prod: any): Product {
     ? prod.displayDiscount 
     : (prod.discount !== undefined ? prod.discount : (mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0));
 
+  const variantIdStr = extractIdString(prod.defaultVariantId) || extractIdString(prod.variantId) || extractIdString(prod._id || prod.id);
+
   return {
     ...prod,
-    id: prod._id || prod.id,
+    id: extractIdString(prod._id || prod.id),
     brand: typeof prod.brandId === 'object' ? (prod.brandId?.name || "Generic") : "Generic",
     categoryName: typeof prod.categoryId === 'object' ? (prod.categoryId?.name || "General") : "General",
     image: prod.coverImage?.url || "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&q=80&w=800",
@@ -120,8 +131,8 @@ export function mapProduct(prod: any): Product {
     reviews: prod.numReviews || prod.reviews || 0,
     isNew: prod.isNew || false,
     slug: prod.default_slug || prod.slug,
-    variantId: prod.defaultVariantId || prod.variantId,
-    categoryId: typeof prod.categoryId === 'object' ? prod.categoryId?._id : prod.categoryId,
+    variantId: variantIdStr,
+    categoryId: typeof prod.categoryId === 'object' ? extractIdString(prod.categoryId?._id || prod.categoryId) : extractIdString(prod.categoryId),
     isActive: prod.isActive !== false && prod.defaultVariant?.isActive !== false,
     stocks: prod.stocks ?? prod.defaultVariant?.stocks ?? prod.stock,
     effectiveTax: prod.effectiveTax || prod.defaultVariant?.effectiveTax || null,

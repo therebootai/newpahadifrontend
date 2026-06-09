@@ -354,21 +354,50 @@ const OrderDetailsPage = () => {
                           <p className="text-sm font-bold text-amber-600">{formatCurrency(item.price)}</p>
                           
                           {/* Item Status / Return Action */}
-                          {item.itemStatus !== 'active' ? (
-                            <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-gray-100 text-gray-500 rounded">
-                              {item.itemStatus.replace(/_/g, ' ')}
-                            </span>
-                          ) : order.orderStatus === 'delivered' && (
-                            <button 
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setShowReturnModal(true);
-                              }}
-                              className="text-[10px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 transition-colors"
-                            >
-                              Return/Replace
-                            </button>
-                          )}
+                          <div className="flex flex-col items-end gap-1">
+                            {item.itemStatus !== 'active' ? (
+                              <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-gray-100 text-gray-500 rounded">
+                                {item.itemStatus.replace(/_/g, ' ')}
+                              </span>
+                            ) : order.orderStatus === 'delivered' && (() => {
+                              const deliveredEntry = order.statusHistory?.find((h: any) => h.status === 'delivered');
+                              const deliveredAt = deliveredEntry ? new Date(deliveredEntry.timestamp) : null;
+                              const windowDays = item.snapshot?.returnWindowDays || 7;
+                              const policyType = item.snapshot?.returnPolicyType || 'BOTH';
+                              
+                              if (policyType === 'NONE') {
+                                return <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">No Return Policy</span>;
+                              }
+
+                              if (!deliveredAt) return null;
+
+                              const expiryDate = new Date(deliveredAt);
+                              expiryDate.setDate(expiryDate.getDate() + windowDays);
+                              const isExpired = new Date() > expiryDate;
+                              const daysLeft = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+                              if (isExpired) {
+                                return <span className="text-[8px] font-bold text-red-400 uppercase tracking-widest">Return Window Expired</span>;
+                              }
+
+                              return (
+                                <>
+                                  <button 
+                                    onClick={() => {
+                                      setSelectedItem(item);
+                                      setShowReturnModal(true);
+                                    }}
+                                    className="text-[10px] font-bold uppercase tracking-widest text-amber-600 hover:text-amber-700 transition-colors"
+                                  >
+                                    Return/Replace
+                                  </button>
+                                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">
+                                    {daysLeft} days left to {policyType === 'BOTH' ? 'return' : policyType.toLowerCase()}
+                                  </p>
+                                </>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
                     </div>

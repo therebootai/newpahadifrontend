@@ -12,6 +12,7 @@ interface Review {
   comment: string;
   createdAt: string;
   isActive: boolean;
+  images?: { url: string; publicId: string }[];
   productId: {
     _id: string;
     title: string;
@@ -172,7 +173,8 @@ export default function ReviewsPage() {
           productName={selectedReview.productId?.title}
           initialData={{
             rating: selectedReview.rating,
-            comment: selectedReview.comment
+            comment: selectedReview.comment,
+            images: selectedReview.images
           }}
           onSuccess={fetchMyReviews}
         />

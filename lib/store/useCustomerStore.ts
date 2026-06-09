@@ -24,6 +24,8 @@ interface CustomerState {
   updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
   sendMobileChangeOTP: (newPhone: string) => Promise<void>;
   verifyMobileChange: (newPhone: string, otp: string) => Promise<void>;
+  sendDeleteAccountOTP: () => Promise<void>;
+  verifyDeleteAccount: (otp: string) => Promise<void>;
 }
 
 export const useCustomerStore = create<CustomerState>()(
@@ -93,6 +95,32 @@ export const useCustomerStore = create<CustomerState>()(
         try {
           const response = await shopApi.post('/auth/mobile-change/verify', { newPhone, otp });
           set({ customer: response.data.data, isLoading: false });
+        } catch (error: any) {
+          const message = error.response?.data?.message || 'Failed to verify OTP';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      sendDeleteAccountOTP: async () => {
+        const { shopApi } = await import('@/lib/fetchers');
+        set({ isLoading: true, error: null });
+        try {
+          await shopApi.post('/auth/delete-account/send-otp');
+          set({ isLoading: false });
+        } catch (error: any) {
+          const message = error.response?.data?.message || 'Failed to send OTP';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      verifyDeleteAccount: async (otp) => {
+        const { shopApi } = await import('@/lib/fetchers');
+        set({ isLoading: true, error: null });
+        try {
+          await shopApi.post('/auth/delete-account/verify', { otp });
+          set({ customer: null, token: null, isAuthenticated: false, isLoading: false });
         } catch (error: any) {
           const message = error.response?.data?.message || 'Failed to verify OTP';
           set({ error: message, isLoading: false });

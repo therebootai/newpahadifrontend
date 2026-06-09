@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FiStar, FiCamera, FiX, FiSend, FiLoader } from "react-icons/fi";
 import { toast } from "sonner";
 import { shopApi } from "@/lib/fetchers";
@@ -13,7 +13,7 @@ type ReviewModalProps = {
   productName?: string;
   onSuccess?: () => void;
   mode?: "create" | "edit";
-  initialData?: { rating: number; comment: string };
+  initialData?: { rating: number; comment: string; images?: { url: string; publicId: string }[] };
   reviewId?: string;
 };
 
@@ -30,11 +30,19 @@ const ReviewModal = ({
   const [rating, setRating] = useState(initialData?.rating ?? 5);
   const [comment, setComment] = useState(initialData?.comment ?? "");
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [images, setImages] = useState<{ url: string; file: File }[]>([]);
+  const [images, setImages] = useState<{ url: string; file?: File; publicId?: string; isExisting?: boolean }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isAuthenticated } = useCustomerStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      setRating(initialData?.rating ?? 5);
+      setComment(initialData?.comment ?? "");
+      setImages(initialData?.images?.map(img => ({ url: img.url, publicId: img.publicId, isExisting: true })) ?? []);
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -55,7 +63,9 @@ const ReviewModal = ({
   const removeImage = (index: number) => {
     setImages(prev => {
       const updated = [...prev];
-      URL.revokeObjectURL(updated[index].url);
+      if (updated[index].file) {
+        URL.revokeObjectURL(updated[index].url);
+      }
       updated.splice(index, 1);
       return updated;
     });
@@ -78,8 +88,21 @@ const ReviewModal = ({
       const formData = new FormData();
       formData.append("rating", rating.toString());
       formData.append("comment", comment);
+      
+      // Append existing server images back as JSON if we are editing
+      const oldImagesToKeep = images.filter(img => img.isExisting);
+      if (oldImagesToKeep.length > 0) {
+        oldImagesToKeep.forEach((img, i) => {
+          formData.append(`images[${i}][url]`, img.url);
+          formData.append(`images[${i}][publicId]`, img.publicId || "");
+        });
+      }
+
+      // Append new files
       images.forEach((img) => {
-        formData.append("images", img.file);
+        if (img.file) {
+          formData.append("images", img.file);
+        }
       });
 
       let response;
@@ -88,9 +111,6 @@ const ReviewModal = ({
           headers: { "Content-Type": "multipart/form-data" }
         });
       } else {
-        // For updates, we might need a different way to handle images if we want to preserve old ones,
-        // but the backend updateReview currently replaces all images if new ones are provided.
-        // Also, PATCH /reviews/:id
         response = await shopApi.patch(`/reviews/${reviewId}`, formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
@@ -176,7 +196,7 @@ const ReviewModal = ({
 
           <div>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-              Upload Photos {mode === "edit" ? "(Replaces current photos)" : "(Optional)"}
+              Photos (Max 5)
             </label>
             <div className="mt-2 flex flex-wrap gap-3">
               {images.map((img, idx) => (
