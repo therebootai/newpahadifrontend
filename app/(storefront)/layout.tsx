@@ -49,7 +49,7 @@ export default function StorefrontLayout({
       lang="en"
       className={`${futura.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-futura">
+      <body className="min-h-full flex flex-col font-futura overflow-x-hidden">
         <Toaster position="top-right" richColors closeButton />
         <ProgressProvider>
           <QueryProvider>

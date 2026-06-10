@@ -1,7 +1,7 @@
 import Section1Client, { StorefrontCategory } from "./Section1Client";
 import { getRootCategories } from "@/lib/services/category";
 
-import fallbackImage from "../public/all-jewellery.svg";
+import fallbackImage from "@/public/all-jewellery.svg";
 
 const Section1 = async () => {
   const categories = await getRootCategories();

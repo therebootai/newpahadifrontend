@@ -15,7 +15,7 @@ function page() {
   return (
     <div>
       <WelcomePopup />
-      <div className="main-shell pt-3! pb-1!">
+      <div className="main-shell px-0! sm:px-5! lg:px-12! pt-3! pb-1!">
         <HeroSlider />
       </div>
       <main className="main-shell">

@@ -160,6 +160,7 @@ const OrderDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelItemModal, setCancelItemModal] = useState<{ itemId: string; title: string } | null>(null);
   const [invoicing, setInvoicing] = useState(false);
 
   // Return Modal State
@@ -195,6 +196,21 @@ const OrderDetailsPage = () => {
       fetchOrder();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleCancelItem = async () => {
+    if (!order || !cancelItemModal) return;
+    setCancelling(true);
+    try {
+      await shopOrderApi.cancelOrderItem(order._id, cancelItemModal.itemId, "Cancelled by user from order details page");
+      toast.success("Item cancelled successfully");
+      setCancelItemModal(null);
+      fetchOrder();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to cancel item");
     } finally {
       setCancelling(false);
     }
@@ -307,6 +323,14 @@ const OrderDetailsPage = () => {
             <FiClock />
             {ORDER_STATUS_LABELS[order.orderStatus] || order.orderStatus}
           </div>
+
+          {/* Refund Status Badge */}
+          {order.paymentStatus === 'refunded' && (
+            <div className="px-4 py-2 rounded-md border border-green-100 bg-green-50 text-green-600 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+              <FiCheckCircle />
+              Refund Processed
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,7 +368,9 @@ const OrderDetailsPage = () => {
                         </Link>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qty: {item.quantity}</p>
-                          {(item.attributes || item.snapshot?.attributes) && Object.entries(item.attributes || item.snapshot?.attributes).map(([k, v]: any) => (
+                          {(item.attributes || item.snapshot?.attributes) && Object.entries(item.attributes || item.snapshot?.attributes)
+                            .filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type'].includes(k.toLowerCase()))
+                            .map(([k, v]: any) => (
                             <p key={k} className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded">
                               {k}: {v}
                             </p>
@@ -397,6 +423,17 @@ const OrderDetailsPage = () => {
                                 </>
                               );
                             })()}
+
+                            {/* Cancel Item Action */}
+                            {(order.orderStatus === 'processing' || order.orderStatus === 'pending_payment') && item.itemStatus === 'active' && (
+                              <button 
+                                onClick={() => setCancelItemModal({ itemId: item._id, title: title })}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-red-100 transition-all mt-2"
+                              >
+                                <FiXCircle size={12} />
+                                Cancel Item
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -569,6 +606,17 @@ const OrderDetailsPage = () => {
         title="Cancel Order"
         message="Are you sure you want to cancel this order? This action cannot be undone."
         confirmText="Yes, Cancel"
+        cancelText="No, Keep It"
+        isLoading={cancelling}
+      />
+
+      <ConfirmModal
+        isOpen={!!cancelItemModal}
+        onClose={() => setCancelItemModal(null)}
+        onConfirm={handleCancelItem}
+        title="Cancel Item"
+        message={`Are you sure you want to cancel "${cancelItemModal?.title}"? This action cannot be undone.`}
+        confirmText="Yes, Cancel Item"
         cancelText="No, Keep It"
         isLoading={cancelling}
       />

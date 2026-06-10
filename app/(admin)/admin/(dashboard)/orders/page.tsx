@@ -37,6 +37,9 @@ interface UIOrderItem {
   quantity: number;
   attributes: Record<string, string>;
   itemStatus: string;
+  refundStatus?: string;
+  refundId?: string;
+  refundAmount?: number;
   _idx: number;
   _uniqueKey: string;
 }
@@ -58,6 +61,9 @@ interface UIOrder {
   shippingCost?: number;
   isConfirmed?: boolean;
   paymentStatus?: string;
+  paidAmount?: number;
+  remainingPaidAmount?: number;
+  refundId?: string;
   items: UIOrderItem[];
 }
 
@@ -124,6 +130,9 @@ function transformOrder(apiOrder: Order, index: number): UIOrder {
     shippingCost: apiOrder.shippingCost || 0,
     isConfirmed: apiOrder.isConfirmed,
     paymentStatus: apiOrder.paymentStatus,
+    paidAmount: (apiOrder as any).paidAmount || 0,
+    remainingPaidAmount: (apiOrder as any).remainingPaidAmount || 0,
+    refundId: (apiOrder as any).refundId,
     items: apiOrder.items.map((item, idx) => ({
       id: item._id || `${apiOrder._id}-${idx}`,
       title: item.snapshot?.title || item.title || 'Unknown Product',
@@ -134,6 +143,9 @@ function transformOrder(apiOrder: Order, index: number): UIOrder {
       quantity: item.quantity,
       attributes: item.attributes || {},
       itemStatus: item.itemStatus || 'active',
+      refundStatus: (item as any).refundStatus,
+      refundId: (item as any).refundId,
+      refundAmount: (item as any).refundAmount,
       _idx: idx,
       _uniqueKey: `${index}-${idx}`,
     })),
@@ -167,7 +179,7 @@ function RefundModal({ order, onClose, onConfirm, isPending }: RefundModalProps)
         </div>
         <div className="p-6 space-y-4">
           <p className="text-sm text-muted">
-            Process a full refund of <span className="font-bold text-primary">{formatCurrency(order.totalAmount)}</span> via Razorpay. This cannot be reversed.
+            Process a refund of the remaining <span className="font-bold text-primary">{formatCurrency(order.remainingPaidAmount ?? order.totalAmount)}</span> via Razorpay. This cannot be reversed.
           </p>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
@@ -206,22 +218,23 @@ function RefundModal({ order, onClose, onConfirm, isPending }: RefundModalProps)
   );
 }
 
-interface CancelModalProps {
+interface RefundItemModalProps {
   order: UIOrder;
+  item: UIOrderItem;
   onClose: () => void;
   onConfirm: (reason: string) => void;
   isPending: boolean;
 }
 
-function CancelModal({ order, onClose, onConfirm, isPending }: CancelModalProps) {
+function RefundItemModal({ order, item, onClose, onConfirm, isPending }: RefundItemModalProps) {
   const [reason, setReason] = useState('');
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/50">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
           <h3 className="font-bold text-primary flex items-center gap-2">
-            <XCircle size={18} className="text-[#FF6B6B]" /> Cancel Order
+            <RefreshCw size={18} className="text-orange-500" /> Refund Product
           </h3>
           <button onClick={onClose} className="text-muted hover:text-primary transition-colors">
             <X size={20} />
@@ -229,13 +242,83 @@ function CancelModal({ order, onClose, onConfirm, isPending }: CancelModalProps)
         </div>
         <div className="p-6 space-y-4">
           <p className="text-sm text-muted">
-            Are you sure you want to cancel this order? This action cannot be undone.
+            Refund <span className="font-bold text-primary">{item.itemTotal}</span> for this product via Razorpay.
           </p>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted">Order ID:</span>
               <span className="font-bold text-primary">{order.orderId}</span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Product:</span>
+              <span className="font-medium text-primary line-clamp-1 flex-1 text-right ml-4">{item.title}</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Refund Reason (Optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Out of stock, Customer request..."
+              className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand transition-colors resize-none"
+              rows={2}
+            />
+          </div>
+        </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-muted hover:text-primary transition-colors">Cancel</button>
+          <button
+            onClick={() => onConfirm(reason)}
+            disabled={isPending}
+            className="px-6 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {isPending && <Loader2 size={16} className="animate-spin" />}
+            Issue Refund
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface CancelModalProps {
+  order: UIOrder;
+  itemId?: string;
+  itemTitle?: string;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isPending: boolean;
+}
+
+function CancelModal({ order, itemId, itemTitle, onClose, onConfirm, isPending }: CancelModalProps) {
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/50">
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <XCircle size={18} className="text-[#FF6B6B]" /> {itemId ? 'Cancel Item' : 'Cancel Order'}
+          </h3>
+          <button onClick={onClose} className="text-muted hover:text-primary transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-muted">
+            Are you sure you want to cancel this {itemId ? 'item' : 'order'}? This action cannot be undone.
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Order ID:</span>
+              <span className="font-bold text-primary">{order.orderId}</span>
+            </div>
+            {itemId && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted">Item:</span>
+                <span className="font-medium text-primary line-clamp-1 flex-1 text-right ml-4">{itemTitle}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted">Customer:</span>
               <span className="font-medium text-primary">{order.customer}</span>
@@ -260,7 +343,7 @@ function CancelModal({ order, onClose, onConfirm, isPending }: CancelModalProps)
             className="px-6 py-2 bg-[#FF6B6B] text-white rounded-lg text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {isPending && <Loader2 size={16} className="animate-spin" />}
-            Cancel Order
+            {itemId ? 'Cancel Item' : 'Cancel Order'}
           </button>
         </div>
       </div>
@@ -387,7 +470,7 @@ function DispatchModal({ order, onClose, onDispatch, isPending }: DispatchModalP
   const [height, setHeight] = useState(10);
 
   return (
-    <div className="fixed inset-0 z-60lex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-brand/5">
           <h3 className="font-bold text-primary flex items-center gap-2">
@@ -624,10 +707,11 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modals state
-  const [cancelModal, setCancelModal] = useState<UIOrder | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ order: UIOrder; itemId?: string; itemTitle?: string } | null>(null);
   const [trackModal, setTrackModal] = useState<UIOrder | null>(null);
   const [dispatchModal, setDispatchModal] = useState<UIOrder | null>(null);
   const [refundModal, setRefundModal] = useState<UIOrder | null>(null);
+  const [refundItemModal, setRefundItemModal] = useState<{ order: UIOrder; item: UIOrderItem } | null>(null);
   const [returnModal, setReturnModal] = useState<{ order: UIOrder, request: any } | null>(null);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [actionType, setActionType] = useState<string | null>(null);
@@ -683,17 +767,34 @@ export default function OrdersPage() {
     },
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await orderApi.cancelAdmin(id, reason);
+  const refundItemMutation = useMutation({
+    mutationFn: async ({ id, itemId, reason }: { id: string; itemId: string; reason: string }) => {
+      return await orderApi.refundOrderItemAdmin(id, itemId, reason);
     },
     onSuccess: () => {
-      toast.success('Order cancelled successfully');
+      toast.success('Item refund processed successfully via Razorpay');
+      setRefundItemModal(null);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to process item refund');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async ({ id, itemId, reason }: { id: string; itemId?: string; reason: string }) => {
+      if (itemId) {
+        return await orderApi.cancelOrderItemAdmin(id, itemId, reason);
+      }
+      return await orderApi.cancelAdmin(id, reason);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.itemId ? 'Item cancelled successfully' : 'Order cancelled successfully');
       setCancelModal(null);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to cancel order');
+      toast.error(error.response?.data?.message || 'Failed to cancel');
     },
   });
 
@@ -997,6 +1098,24 @@ export default function OrdersPage() {
                         <span className="text-muted font-bold">Total:</span>
                         <span className="font-bold text-brand-dark ml-1">{formatCurrency(order.totalAmount)}</span>
                       </div>
+                      
+                      {/* Global Order Refund Action */}
+                      {(order.statusRaw === 'cancelled' || order.statusRaw === 'returned') && order.payment.toLowerCase() === 'razorpay' && (
+                        <div className="ml-4">
+                          {order.paymentStatus === 'refunded' ? (
+                            <div className="px-2 py-0.5 bg-green-500 text-white text-[8px] font-black uppercase tracking-tighter rounded shadow-sm flex items-center gap-1 w-fit">
+                              <Check size={8} strokeWidth={4} /> REFUND COMPLETE
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => setRefundModal(order)}
+                              className="px-4 py-1.5 bg-[#FF6B6B] text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                            >
+                              <RefreshCw size={12} /> Refund Order
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1051,8 +1170,26 @@ export default function OrdersPage() {
                             {order.status}
                           </div>
                           {item.itemStatus !== 'active' && (
-                             <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600 rounded inline-block">
-                                {item.itemStatus.replace(/_/g, ' ')}
+                             <div className="flex flex-col gap-1">
+                               <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600 rounded inline-block w-fit">
+                                  {item.itemStatus.replace(/_/g, ' ')}
+                               </div>
+                               {(item.itemStatus === 'cancelled' || item.itemStatus === 'returned') && order.payment.toLowerCase() === 'razorpay' && (
+                                 <div className="mt-1">
+                                   {(item.refundStatus === 'processed' || order.paymentStatus === 'refunded') ? (
+                                     <div className="px-2 py-0.5 bg-green-500 text-white text-[8px] font-black uppercase tracking-tighter rounded shadow-sm flex items-center gap-1 w-fit">
+                                       <Check size={8} strokeWidth={4} /> REFUND COMPLETE
+                                     </div>
+                                   ) : (
+                                     <button
+                                       onClick={() => setRefundItemModal({ order, item })}
+                                       className="text-[9px] font-bold text-orange-500 hover:text-orange-600 underline underline-offset-2 flex items-center gap-1"
+                                     >
+                                       <RefreshCw size={10} /> Issue Partial Refund
+                                     </button>
+                                   )}
+                                 </div>
+                               )}
                              </div>
                           )}
                         </div>
@@ -1079,7 +1216,7 @@ export default function OrdersPage() {
                                 <Package size={12} /> Dispatch
                               </button>
                               <button
-                                onClick={() => setCancelModal(order)}
+                                onClick={() => setCancelModal({ order, itemId: item.id, itemTitle: item.title })}
                                 className="w-full lg:w-28 py-1.5 bg-[#FF6B6B]/10 text-[#FF6B6B] border border-[#FF6B6B]/20 rounded-lg text-xs font-bold hover:bg-[#FF6B6B]/20 transition-colors"
                               >
                                 Cancel
@@ -1103,7 +1240,7 @@ export default function OrdersPage() {
                                 <FileText size={12} /> Label
                               </button>
                               <button
-                                onClick={() => setCancelModal(order)}
+                                onClick={() => setCancelModal({ order, itemId: item.id, itemTitle: item.title })}
                                 className="w-full lg:w-28 py-1.5 bg-[#FF6B6B]/10 text-[#FF6B6B] border border-[#FF6B6B]/20 rounded-lg text-xs font-bold hover:bg-[#FF6B6B]/20 transition-colors"
                               >
                                 Cancel
@@ -1125,23 +1262,7 @@ export default function OrdersPage() {
                             </>
                           )}
 
-                          {/* Cancelled Actions */}
-                          {order.statusRaw === 'cancelled' && (
-                            <>
-                              {order.paymentStatus === 'refunded' ? (
-                                <div className="w-full lg:w-28 py-1.5 bg-green-50 text-green-600 border border-green-100 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1">
-                                  <Check size={10} /> Refund Completed
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={() => setRefundModal(order)}
-                                  className="w-full lg:w-28 py-1.5 bg-[#FF6B6B] text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
-                                >
-                                  <RefreshCw size={12} /> Refund
-                                </button>
-                              )}
-                            </>
-                          )}
+                          {/* Cancelled Actions - REMOVED redundant item-level buttons */}
                         </div>
                       </div>
                     ))}
@@ -1180,11 +1301,31 @@ export default function OrdersPage() {
         />
       )}
 
+      {refundItemModal && (
+        <RefundItemModal
+          order={refundItemModal.order}
+          item={refundItemModal.item}
+          onClose={() => setRefundItemModal(null)}
+          onConfirm={(reason) => refundItemMutation.mutate({ 
+            id: refundItemModal.order.id, 
+            itemId: refundItemModal.item.id, 
+            reason 
+          })}
+          isPending={refundItemMutation.isPending}
+        />
+      )}
+
       {cancelModal && (
         <CancelModal
-          order={cancelModal}
+          order={cancelModal.order}
+          itemId={cancelModal.itemId}
+          itemTitle={cancelModal.itemTitle}
           onClose={() => setCancelModal(null)}
-          onConfirm={(reason) => cancelMutation.mutate({ id: cancelModal.id, reason })}
+          onConfirm={(reason) => cancelMutation.mutate({ 
+            id: cancelModal.order.id, 
+            itemId: cancelModal.itemId, 
+            reason 
+          })}
           isPending={cancelMutation.isPending}
         />
       )}

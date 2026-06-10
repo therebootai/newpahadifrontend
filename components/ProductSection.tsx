@@ -1,8 +1,8 @@
 import ProductCard from "./ProductCard";
 import { getHomeData, getProducts, Product } from "@/lib/services/product";
-import image1 from "../public/3.jpg";
-import image2 from "../public/4.jpg";
-import image3 from "../public/image 3.jpg.jpeg";
+import image1 from "@/public/3.jpg";
+import image2 from "@/public/4.jpg";
+import image3 from "@/public/image 3.jpg.jpeg";
 import Image from "next/image";
 import Link from "next/link";
 

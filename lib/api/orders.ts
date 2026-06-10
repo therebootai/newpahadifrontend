@@ -32,6 +32,9 @@ export interface OrderItem {
   attributes?: Record<string, string>;
   slug?: string;
   itemStatus: string;
+  refundStatus?: string;
+  refundId?: string;
+  refundAmount?: number;
 }
 
 export interface ShippingAddress {
@@ -78,6 +81,8 @@ export interface Order {
   orderStatusRaw?: string;
   paymentMethod?: string;
   paymentStatus?: string;
+  paidAmount?: number;
+  refundId?: string;
   isConfirmed?: boolean;
   isPartiallyConfirmed?: boolean;
   shippingAddress?: ShippingAddress;
@@ -194,8 +199,22 @@ export const orderApi = {
     return response.data.data;
   },
 
+  cancelOrderItemAdmin: async (id: string, itemId: string, reason: string): Promise<Order> => {
+    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/cancel-item/${itemId}/admin`, {
+      reason,
+    });
+    return response.data.data;
+  },
+
   refund: async (id: string, data: { reason?: string }): Promise<Order> => {
     const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/refund`, data);
+    return response.data.data;
+  },
+
+  refundOrderItemAdmin: async (id: string, itemId: string, reason: string): Promise<Order> => {
+    const response = await adminApi.patch<{ data: Order; message: string }>(`/orders/${id}/refund-item/${itemId}`, {
+      reason,
+    });
     return response.data.data;
   },
 };
@@ -255,6 +274,13 @@ export const shopOrderApi = {
 
   cancel: async (id: string, reason: string): Promise<Order> => {
     const response = await shopApi.patch<{ data: Order; message: string }>(`/orders/me/${id}/cancel`, {
+      reason,
+    });
+    return response.data.data;
+  },
+
+  cancelOrderItem: async (id: string, itemId: string, reason: string): Promise<Order> => {
+    const response = await shopApi.patch<{ data: Order; message: string }>(`/orders/me/${id}/cancel-item/${itemId}`, {
       reason,
     });
     return response.data.data;

@@ -21,6 +21,12 @@ import { Product, VariantResponse } from "@/lib/services/product";
 import { useWishlistStore } from "@/lib/store/useWishlistStore";
 import { useCartStore } from "@/lib/store/useCartStore";
 import { IoHeart, IoHeartOutline } from "react-icons/io5";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
+
 import { shopApi } from "@/lib/fetchers";
 import { toast } from "sonner";
 import ProductCard from "./ProductCard";
@@ -244,6 +250,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
   }, [currentVariant, product]);
 
   const [mainImage, setMainImage] = useState(productImages[0]);
+  const [swiperInstance, setSwiperInstance] = useState<any>(null);
   const [pincode, setPincode] = useState("");
   const [pincodeStatus, setPincodeStatus] = useState<{
     status: "idle" | "loading" | "success" | "error";
@@ -340,17 +347,31 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
           <div className="w-full xl:sticky xl:top-24 z-30">
             {/* Mobile View */}
             <div className="xl:hidden">
-              <div className="relative mx-auto max-w-[350px] overflow-hidden rounded-md bg-white shadow-sm border border-gray-100 flex justify-center">
-                <Image
-                  src={mainImage}
-                  alt={title}
-                  width={600}
-                  height={600}
-                  className="aspect-square w-full object-cover"
-                />
+              <div className="relative mx-auto max-w-87.5 overflow-hidden rounded-md bg-white shadow-sm border border-gray-100">
+                <Swiper
+                  modules={[Pagination, Autoplay]}
+                  pagination={{ clickable: true }}
+                  className="product-mobile-swiper"
+                  spaceBetween={0}
+                  slidesPerView={1}
+                  onSwiper={setSwiperInstance}
+                  onSlideChange={(swiper) => setMainImage(productImages[swiper.activeIndex])}
+                >
+                  {productImages.map((img, index) => (
+                    <SwiperSlide key={img}>
+                      <Image
+                        src={img}
+                        alt={`${title} - image ${index + 1}`}
+                        width={600}
+                        height={600}
+                        className="aspect-square w-full object-cover"
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
 
                 {/* Overlay Action Buttons Mobile */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
                   <button
                     onClick={handleWishlist}
                     disabled={isWishlistPending || !wishlistVariantId}
@@ -376,7 +397,10 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 {productImages.map((img, index) => (
                   <button
                     key={img}
-                    onClick={() => setMainImage(img)}
+                    onClick={() => {
+                      setMainImage(img);
+                      if (swiperInstance) swiperInstance.slideTo(index);
+                    }}
                     className={`shrink-0 overflow-hidden rounded-md border-2 transition-all w-14 h-14 ${
                       mainImage === img 
                         ? "border-amber-500" 
@@ -423,7 +447,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
               {/* Main Image Container */}
               <div className="flex-1 space-y-6 relative">
                 <div 
-                  className="relative mx-auto max-w-[450px] overflow-hidden rounded-md bg-white shadow-sm border border-gray-100 group/img flex justify-center cursor-zoom-in"
+                  className="relative mx-auto max-w-112.5 overflow-hidden rounded-md bg-white shadow-sm border border-gray-100 group/img flex justify-center cursor-zoom-in"
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -468,7 +492,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 />
 
                 {/* Desktop Action Buttons */}
-                <div className="grid grid-cols-2 gap-4 max-w-[450px] mx-auto">
+                <div className="grid grid-cols-2 gap-4 max-w-112.5 mx-auto">
                   <button
                     onClick={handleAddToCart}
                     disabled={isOutOfStock}
@@ -524,7 +548,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             </div>
 
             {/* PRICE & STOCK */}
-            <div className="pt-3 border-t border-gray-100 flex items-center justify-start flex-wrap gap-4">
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-start flex-wrap gap-2">
               <div className="flex items-center gap-4">
                 <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
                   {formatPrice(price)}
@@ -542,7 +566,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
               </div>
 
               <div className="shrink-0">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${
+                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${
                   isOutOfStock 
                     ? "bg-red-50 text-red-600 border border-red-100" 
                     : "bg-green-50 text-green-600 border border-green-100"
@@ -591,7 +615,10 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 <div className="flex flex-wrap gap-2.5">
                   {variant.siblingOptions.map((opt) => {
                     const isActive = opt.slug === currentVariant?.slug;
-                    const attrLabel = Object.entries(opt.attributes || {}).map(([k, v]) => `${k}: ${v}`).join(" / ") || opt.title;
+                    const attrLabel = Object.entries(opt.attributes || {})
+                      .filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type', 'discount' , 'type'].includes(k.toLowerCase()))
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join(" / ") || opt.title;
                     
                     return (
                       <Link
@@ -684,14 +711,14 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
 
       {/* RELATED PRODUCTS */}
       {similarProducts.length > 0 && (
-        <div className="mt-4 border-t border-gray-100 pt-8 pb-12 px-4">
+        <div className="mt-4 border-t border-gray-100 pt-8 pb-12">
           <div className="flex items-center justify-between mb-8 px-2">
             <div>
               <h3 className="text-2xl font-bold text-gray-900 tracking-tight">You May Also Like</h3>
               <p className="mt-1 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Based on your interests</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {similarProducts.slice(0, 4).map((p) => (
               <ProductCard
                 key={p.id}

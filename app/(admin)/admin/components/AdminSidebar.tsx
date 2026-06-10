@@ -15,6 +15,7 @@ import {
   Warehouse,
   List,
   Star,
+  Bell,
   ExternalLink,
   ChevronDown,
   Menu,
@@ -35,6 +36,7 @@ interface NavItem {
 const mainMenu: NavItem[] = [
   { label: 'Order Management', href: '/admin/orders', icon: <ShoppingCart size={20} /> },
   { label: 'Customers', href: '/admin/customers', icon: <Users size={20} /> },
+  { label: 'Notifications', href: '/admin/notifications', icon: <Bell size={20} /> },
   { label: 'Coupon Code', href: '/admin/coupons', icon: <Ticket size={20} /> },
   { label: 'Categories', href: '/admin/categories', icon: <Grid3X3 size={20} /> },
   { label: 'Brand', href: '/admin/brands', icon: <Building2 size={20} /> },

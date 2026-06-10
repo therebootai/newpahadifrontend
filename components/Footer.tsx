@@ -9,14 +9,14 @@ import {
 } from "react-icons/fa";
 import { FaFileInvoice } from "react-icons/fa";
 
-import visa from "../public/image copy 8.png";
-import mastercard from "../public/image copy 9.png";
-import rupay from "../public/image copy 10.png";
-import upi from "../public/image copy 11.png";
-import logoFooter from "../public/footer-logo-dev.svg";
-import logoPc from "../public/logo pc copy.svg";
-import msmeLogo from "../public/national-emblem-or-symbol.webp";
-import makeInIndiaLogo from "../public/Make-in-India-LOGO.webp";
+import visa from "@/public/image copy 8.png";
+import mastercard from "@/public/image copy 9.png";
+import rupay from "@/public/image copy 10.png";
+import upi from "@/public/image copy 11.png";
+import logoFooter from "@/public/footer-logo-dev.svg";
+import logoPc from "@/public/logo pc copy.svg";
+import msmeLogo from "@/public/national-emblem-or-symbol.webp";
+import makeInIndiaLogo from "@/public/Make-in-India-LOGO.webp";
 
 import { MdEmail } from "react-icons/md";
 import Image from "next/image";

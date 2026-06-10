@@ -94,9 +94,11 @@ const CartPage = () => {
                     </Link>
 
                     {/* ATTRIBUTES */}
-                    {item.attributes && Object.entries(item.attributes).length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-                        {Object.entries(item.attributes).map(([k, v]) => (
+                    {item.attributes && Object.entries(item.attributes).filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type'].includes(k.toLowerCase())).length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {Object.entries(item.attributes)
+                          .filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type'].includes(k.toLowerCase()))
+                          .map(([k, v]) => (
                           <div key={k} className="flex items-center gap-1">
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{k}:</span>
                             <span className="text-[11px] font-bold text-amber-700 uppercase">{v}</span>

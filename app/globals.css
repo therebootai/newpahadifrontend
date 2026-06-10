@@ -61,7 +61,7 @@
 }
 
 .hero-slider {
-  overflow: visible !important;
+  /* overflow: visible !important; */
 }
 
 .hero-slider .swiper-pagination {
@@ -77,6 +77,20 @@
 
 .hero-slider .swiper-pagination-bullet-active {
   background: #f59e0b;
+}
+
+.product-mobile-swiper .swiper-pagination {
+  bottom: 10px !important;
+}
+
+.product-mobile-swiper .swiper-pagination-bullet {
+  background: #222;
+  opacity: 0.3;
+}
+
+.product-mobile-swiper .swiper-pagination-bullet-active {
+  background: #b98b5f;
+  opacity: 1;
 }
 
 @layer utilities {

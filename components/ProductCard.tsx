@@ -174,9 +174,11 @@ const ProductCard = ({
         </p>
 
         {/* ATTRIBUTES */}
-        {wishlistProduct.attributes && Object.entries(wishlistProduct.attributes).length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {Object.entries(wishlistProduct.attributes).map(([k, v]) => (
+        {wishlistProduct.attributes && Object.entries(wishlistProduct.attributes).filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type'].includes(k.toLowerCase())).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {Object.entries(wishlistProduct.attributes)
+              .filter(([k]) => !['discounttype', 'type-single', 'discountType', 'type'].includes(k.toLowerCase()))
+              .map(([k, v]) => (
               <span key={k} className="text-[9px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded">
                 {k}: {v as string}
               </span>

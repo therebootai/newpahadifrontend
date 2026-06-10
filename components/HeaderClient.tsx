@@ -22,9 +22,9 @@ import { HiOutlineMenu, HiX } from "react-icons/hi";
 
 import MenuItem from "./MenuItem";
 
-import logo from "../public/favicon.png";
-import logopc from "../public/logo pc copy 2.svg";
-import fallbackIcon from "../public/all-jewellery.svg";
+import logo from "@/public/favicon.png";
+import logopc from "@/public/logo pc copy 2.svg";
+import fallbackIcon from "@/public/all-jewellery.svg";
 import { useCustomerStore } from "@/lib/store/useCustomerStore";
 
 export type HeaderCategory = {

@@ -18,7 +18,7 @@ const HeroSlider = () => {
   if (isLoading) {
     return (
       <div className="w-full pb-1">
-        <Skeleton className="h-87.5 md:h-130 w-full rounded-3xl" />
+        <Skeleton className="h-87.5 md:h-130 w-full md:rounded-3xl rounded-none" />
       </div>
     );
   }
@@ -42,11 +42,11 @@ const HeroSlider = () => {
         pagination={{
           clickable: true,
         }}
-        className="hero-slider"
+        className="hero-slider pb-10"
       >
         {banners.map((slide, index) => (
           <SwiperSlide key={slide._id}>
-            <div className="relative h-87.5 md:h-130 w-full overflow-hidden rounded-3xl">
+            <div className="relative h-87.5 md:h-130 w-full overflow-hidden md:rounded-3xl rounded-none">
               <Link
                 href={slide.link || "/category/all-jewellery"}
                 className="relative block w-full h-full"
