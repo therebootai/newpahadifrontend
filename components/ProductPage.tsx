@@ -341,13 +341,13 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
   return (
     <div className="w-full">
       <section className="mb-10">
-        <div className="grid grid-cols-1 xl:grid-cols-[40%_60%] gap-8 xl:gap-12 items-start relative">
+        <div className="grid grid-cols-1 lg:grid-cols-[40%_60%] gap-8 xl:gap-12 items-start relative">
           
           {/* LEFT COLUMN: VISUALS (Sticky on Desktop) */}
           <div className="w-full xl:sticky xl:top-24 z-30">
             {/* Mobile View */}
             <div className="xl:hidden">
-              <div className="relative mx-auto max-w-87.5 overflow-hidden rounded-md bg-white shadow-sm border border-gray-100">
+              <div className="relative mx-auto max-w-full overflow-hidden rounded-md bg-white shadow-sm border border-gray-100">
                 <Swiper
                   modules={[Pagination, Autoplay]}
                   pagination={{ clickable: true }}
@@ -364,7 +364,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                         alt={`${title} - image ${index + 1}`}
                         width={600}
                         height={600}
-                        className="aspect-square w-full object-cover"
+                        className="aspect-square w-full object-cover rounded-2xl"
                       />
                     </SwiperSlide>
                   ))}
@@ -393,7 +393,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
               </div>
 
               {/* Mobile Thumbnails below main image */}
-              <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar justify-center">
+              <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar justify-start">
                 {productImages.map((img, index) => (
                   <button
                     key={img}
@@ -401,7 +401,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                       setMainImage(img);
                       if (swiperInstance) swiperInstance.slideTo(index);
                     }}
-                    className={`shrink-0 overflow-hidden rounded-md border-2 transition-all w-14 h-14 ${
+                    className={`shrink-0 overflow-hidden rounded-md border-2 transition-all w-16 h-16 ${
                       mainImage === img 
                         ? "border-amber-500" 
                         : "border-gray-100"
@@ -654,13 +654,13 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             {/* ACCORDION SECTION */}
             <div className="pt-6 border-t border-gray-100 space-y-3">
               {[
-                { id: "description", label: "Description", content: <div className="text-xs leading-loose text-gray-600 font-medium" dangerouslySetInnerHTML={{ __html: description }} /> },
+                { id: "description", label: "Description", content: <div className="text-xs leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
                 { id: "specs", label: "Specifications", content: (
                   <div className="grid grid-cols-1 gap-2">
                     {(productDetails?.specs?.length ? productDetails.specs : [{ key: "Brand", value: "Pahadi Collections" }, { key: "SKU", value: currentVariant?.sku || "N/A" }]).map((spec) => (
                       <div key={spec.key} className="flex justify-between p-3 rounded-md bg-gray-50/50 border border-gray-100">
                         <span className="text-[10px] font-bold text-gray-400 uppercase">{spec.key}</span>
-                        <span className="text-[10px] font-bold text-gray-900">{spec.value}</span>
+                        <span className="text-[10px] text-gray-900">{spec.value}</span>
                       </div>
                     ))}
                   </div>
@@ -676,7 +676,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                     onClick={() => toggleAccordion(item.id)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-all"
                   >
-                    <span className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">{item.label}</span>
+                    <span className="text-[11px] font-semibold text-gray-900 uppercase tracking-widest">{item.label}</span>
                     {activeAccordion === item.id ? <FiChevronUp /> : <FiChevronDown />}
                   </button>
                   {activeAccordion === item.id && <div className="p-4 pt-0 border-t border-gray-50">{item.content}</div>}
@@ -693,12 +693,12 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 { icon: <FiHeartIcon />, label: "Handmade", sub: "Craftsmanship" },
               ].map((f, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-md border border-gray-100 bg-white hover:shadow-sm">
-                  <div className="h-8 w-8 flex items-center justify-center rounded-md bg-amber-50 text-amber-500 text-lg">
+                  <div className="h-14 w-14 flex items-center justify-center rounded-md bg-amber-50 text-amber-500 text-lg">
                     {f.icon}
                   </div>
                   <div>
-                    <h5 className="text-[10px] font-bold text-gray-900 uppercase">{f.label}</h5>
-                    <p className="text-[8px] text-gray-400 font-medium">{f.sub}</p>
+                    <h5 className="text-[11px] font-semibold text-gray-900 uppercase">{f.label}</h5>
+                    <p className="text-[9px] text-gray-400 font-medium">{f.sub}</p>
                   </div>
                 </div>
               ))}
