@@ -13,6 +13,8 @@ import {
   FiShare2,
   FiChevronDown,
   FiChevronUp,
+  FiMinus,
+  FiPlus,
   FiLock,
   FiHeart as FiHeartIcon,
 } from "react-icons/fi";
@@ -151,6 +153,9 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
   const isWishlistPending = pendingToggles.has(wishlistVariantId);
 
   const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const cartItems = useCartStore((state) => state.items);
+  const cartItem = cartItems.find((item) => item.variantId === wishlistVariantId);
 
   const isOutOfStock = (currentVariant?.stocks !== undefined && currentVariant.stocks <= 0) || currentVariant?.isActive === false;
 
@@ -347,7 +352,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
           <div className="w-full xl:sticky xl:top-24 z-30">
             {/* Mobile View */}
             <div className="xl:hidden">
-              <div className="relative mx-auto max-w-full overflow-hidden rounded-md bg-white shadow-sm border border-gray-100">
+              <div className="relative mx-auto max-w-full overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100">
                 <Swiper
                   modules={[Pagination, Autoplay]}
                   pagination={{ clickable: true }}
@@ -447,7 +452,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
               {/* Main Image Container */}
               <div className="flex-1 space-y-6 relative">
                 <div 
-                  className="relative mx-auto max-w-112.5 overflow-hidden rounded-md bg-white shadow-sm border border-gray-100 group/img flex justify-center cursor-zoom-in"
+                  className="relative mx-auto max-w-112.5 xl:max-w-125 2xl:max-w-150 3xl:max-w-170 overflow-hidden rounded-md bg-white shadow-sm border border-gray-100 group/img flex justify-center cursor-zoom-in"
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -492,27 +497,46 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 />
 
                 {/* Desktop Action Buttons */}
-                <div className="grid grid-cols-2 gap-4 max-w-112.5 mx-auto">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isOutOfStock}
-                    className={`flex h-14 items-center justify-center gap-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-gray-100 group ${
-                      isOutOfStock 
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-                        : "bg-white border border-gray-100 text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    <FiShoppingBag size={20} />
-                    {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-                  </button>
+                <div className="grid grid-cols-2 gap-4 max-w-112.5 xl:max-w-137.5 2xl:max-w-162.5 mx-auto w-full">
+                  {cartItem ? (
+                    <div className="flex h-14 items-center justify-between rounded-md bg-[#b98b5f] text-white px-6 shadow-xl shadow-amber-100">
+                      <button 
+                        onClick={() => updateQuantity(wishlistVariantId!, cartItem.quantity - 1)}
+                        className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                      >
+                        <FiMinus size={20} />
+                      </button>
+                      <span className="text-lg font-bold min-w-[2ch] text-center">{cartItem.quantity}</span>
+                      <button 
+                        onClick={() => updateQuantity(wishlistVariantId!, cartItem.quantity + 1)}
+                        disabled={cartItem.quantity >= (currentVariant?.stocks || 99)}
+                        className="p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-30"
+                      >
+                        <FiPlus size={20} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={isOutOfStock}
+                      className={`flex h-14 items-center justify-center gap-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-amber-100 group ${
+                        isOutOfStock 
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+                          : "bg-[#b98b5f] text-white hover:bg-[#a67a52]"
+                      }`}
+                    >
+                      <FiShoppingBag size={20} />
+                      {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                    </button>
+                  )}
 
                   <button
                     onClick={handleBuyNow}
                     disabled={isOutOfStock}
-                    className={`flex h-14 items-center justify-center gap-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-gray-200 group ${
+                    className={`flex h-14 items-center justify-center gap-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-green-100 group ${
                       isOutOfStock 
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-                        : "bg-[#b98b5f] text-white hover:bg-[#a67a52]"
+                        : "bg-[#006a4e] text-white hover:bg-[#005a42]"
                     }`}
                   >
                     Buy Now
@@ -578,7 +602,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             </div>
 
             {/* PINCODE CHECKER */}
-            <div className="mt-4 p-4 max-w-fit rounded-md bg-gray-50 border border-gray-100">
+            <div className="mt-4 p-4 max-w-full md:max-w-fit rounded-md bg-gray-50 border border-gray-200">
               <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                 Check Delivery Availability
               </h4>
@@ -652,13 +676,13 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             </div>
 
             {/* ACCORDION SECTION */}
-            <div className="pt-6 border-t border-gray-100 space-y-3">
+            <div className="pt-3 space-y-3">
               {[
                 { id: "description", label: "Description", content: <div className="text-xs leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
                 { id: "specs", label: "Specifications", content: (
                   <div className="grid grid-cols-1 gap-2">
                     {(productDetails?.specs?.length ? productDetails.specs : [{ key: "Brand", value: "Pahadi Collections" }, { key: "SKU", value: currentVariant?.sku || "N/A" }]).map((spec) => (
-                      <div key={spec.key} className="flex justify-between p-3 rounded-md bg-gray-50/50 border border-gray-100">
+                      <div key={spec.key} className="flex justify-between p-3 rounded-md bg-gray-50/50 border border-gray-200">
                         <span className="text-[10px] font-bold text-gray-400 uppercase">{spec.key}</span>
                         <span className="text-[10px] text-gray-900">{spec.value}</span>
                       </div>
@@ -671,12 +695,12 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                   </div>
                 )}
               ].map((item) => (
-                <div key={item.id} className="border border-gray-100 rounded-md overflow-hidden bg-white">
+                <div key={item.id} className="border border-gray-200 rounded-md overflow-hidden bg-white">
                   <button 
                     onClick={() => toggleAccordion(item.id)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-all"
+                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-all"
                   >
-                    <span className="text-[11px] font-semibold text-gray-900 uppercase tracking-widest">{item.label}</span>
+                    <span className="text-[12px] font-semibold text-gray-900 uppercase tracking-widest">{item.label}</span>
                     {activeAccordion === item.id ? <FiChevronUp /> : <FiChevronDown />}
                   </button>
                   {activeAccordion === item.id && <div className="p-4 pt-0 border-t border-gray-50">{item.content}</div>}
@@ -693,12 +717,12 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                 { icon: <FiHeartIcon />, label: "Handmade", sub: "Craftsmanship" },
               ].map((f, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-md border border-gray-100 bg-white hover:shadow-sm">
-                  <div className="h-14 w-14 flex items-center justify-center rounded-md bg-amber-50 text-amber-500 text-lg">
+                  <div className="md:h-14 md:w-14 h-10  w-10 flex items-center justify-center rounded-md bg-amber-50 text-amber-500 text-2xl">
                     {f.icon}
                   </div>
                   <div>
-                    <h5 className="text-[11px] font-semibold text-gray-900 uppercase">{f.label}</h5>
-                    <p className="text-[9px] text-gray-400 font-medium">{f.sub}</p>
+                    <h5 className="text-[10px] lg:text-[14px] font-semibold text-gray-900 uppercase">{f.label}</h5>
+                    <p className="text-[11px] lg:text-[12px] text-gray-400 font-medium">{f.sub}</p>
                   </div>
                 </div>
               ))}
@@ -740,20 +764,39 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
       {/* MOBILE STICKY BOTTOM ACTIONS */}
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] xl:hidden">
         <div className="flex gap-3 max-w-lg mx-auto">
-          <button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-xs font-bold uppercase tracking-widest border-2 ${
-              isOutOfStock ? "bg-gray-50 border-gray-200 text-gray-400" : "bg-white border-amber-500 text-amber-600"
-            }`}
-          >
-            <FiShoppingBag /> Add
-          </button>
+          {cartItem ? (
+            <div className="flex h-12 flex-1 items-center justify-between rounded-md bg-[#b98b5f] text-white px-4">
+              <button 
+                onClick={() => updateQuantity(wishlistVariantId!, cartItem.quantity - 1)}
+                className="p-1 hover:bg-white/10 rounded-full"
+              >
+                <FiMinus size={16} />
+              </button>
+              <span className="text-sm font-bold">{cartItem.quantity}</span>
+              <button 
+                onClick={() => updateQuantity(wishlistVariantId!, cartItem.quantity + 1)}
+                disabled={cartItem.quantity >= (currentVariant?.stocks || 99)}
+                className="p-1 hover:bg-white/10 rounded-full disabled:opacity-30"
+              >
+                <FiPlus size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-xs font-bold uppercase tracking-widest border-2 ${
+                isOutOfStock ? "bg-gray-50 border-gray-200 text-gray-400" : "bg-[#b98b5f] border-[#b98b5f] text-white"
+              }`}
+            >
+              <FiShoppingBag /> Add
+            </button>
+          )}
           <button
             onClick={handleBuyNow}
             disabled={isOutOfStock}
             className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg ${
-              isOutOfStock ? "bg-gray-300 text-gray-400" : "bg-[#b98b5f] text-white"
+              isOutOfStock ? "bg-gray-300 text-gray-400" : "bg-[#006a4e] text-white"
             }`}
           >
             Buy Now

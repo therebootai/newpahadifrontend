@@ -21,8 +21,12 @@ import makeInIndiaLogo from "@/public/Make-in-India-LOGO.webp";
 import { MdEmail } from "react-icons/md";
 import Image from "next/image";
 import Link from "next/link";
+import { getRootCategories } from "@/lib/services/category";
 
-const Footer = () => {
+const Footer = async () => {
+  const allCategories = await getRootCategories();
+  const displayCategories = allCategories.slice(0, 5);
+
   return (
     <footer className="w-full bg-[#f7f7f7] border-t border-amber-200">
       {/* TOP SECTION */}
@@ -161,40 +165,15 @@ const Footer = () => {
                 All Jewellery
               </Link>
 
-              <Link
-                href="/category/mangalsutra"
-                className="hover:text-amber-500 cursor-pointer transition-all"
-              >
-                Mangalsutra
-              </Link>
-
-              <Link
-                href="/category/earrings"
-                className="hover:text-amber-500 cursor-pointer transition-all"
-              >
-                Earrings
-              </Link>
-
-              <Link
-                href="/category/necklaces"
-                className="hover:text-amber-500 cursor-pointer transition-all"
-              >
-                Necklaces
-              </Link>
-
-              <Link
-                href="/category/rings"
-                className="hover:text-amber-500 cursor-pointer transition-all"
-              >
-                Rings
-              </Link>
-
-              <Link
-                href="/category/bridal-sets"
-                className="hover:text-amber-500 cursor-pointer transition-all"
-              >
-                Bridal Sets
-              </Link>
+              {displayCategories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/category/${category.slug}`}
+                  className="hover:text-amber-500 cursor-pointer transition-all capitalize"
+                >
+                  {category.name}
+                </Link>
+              ))}
             </div>
           </div>
 

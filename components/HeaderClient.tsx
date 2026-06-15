@@ -19,6 +19,7 @@ import { IoIosHeartEmpty } from "react-icons/io";
 import { CiUser, CiSearch } from "react-icons/ci";
 import { IoCartOutline } from "react-icons/io5";
 import { HiOutlineMenu, HiX } from "react-icons/hi";
+import { FiMapPin, FiPackage } from "react-icons/fi";
 
 import MenuItem from "./MenuItem";
 
@@ -175,6 +176,14 @@ const HeaderClient = ({ categories }: HeaderClientProps) => {
                     </Link>
 
                     <Link
+                      href="/account/addresses"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="rounded-lg px-3 py-2 text-sm font-bold text-gray-700 transition-all hover:bg-amber-50 hover:text-amber-500"
+                    >
+                      Manage Addresses
+                    </Link>
+
+                    <Link
                       href="/account/orders"
                       onClick={() => setUserMenuOpen(false)}
                       className="rounded-lg px-3 py-2 text-sm font-bold text-gray-700 transition-all hover:bg-amber-50 hover:text-amber-500"
@@ -281,9 +290,14 @@ const HeaderClient = ({ categories }: HeaderClientProps) => {
         }`}
       >
         <div className="flex items-center justify-between border-b border-gray-50 p-6">
-          <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-            <Image src={logo} alt="Logo" width={32} height={32} />
-            <span className="text-xl font-bold text-gray-900 tracking-tight">Pahadi</span>
+          <Link href="/" onClick={() => setOpen(false)} className="flex items-center">
+            <Image 
+              src={logopc} 
+              alt="Logo" 
+              width={180} 
+              height={60} 
+              className="object-contain"
+            />
           </Link>
           <button 
             onClick={() => setOpen(false)}
@@ -307,15 +321,15 @@ const HeaderClient = ({ categories }: HeaderClientProps) => {
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                   pathname === `/category/${item.slug}` ? "bg-white shadow-sm" : "bg-gray-100 group-hover:bg-white group-hover:shadow-sm"
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                   pathname === `/category/${item.slug}` ? "bg-white shadow-md" : "bg-gray-100 group-hover:bg-white group-hover:shadow-md"
                 }`}>
                   <Image
-                    height={20}
-                    width={20}
+                    height={40}
+                    width={40}
                     src={item.iconUrl || item.imageUrl || fallbackIcon}
                     alt={item.name}
-                    className="w-6 h-6 object-contain"
+                    className="w-10 h-10 object-contain"
                   />
                 </div>
                 <span className="text-sm font-bold tracking-tight">{item.name}</span>
@@ -334,6 +348,26 @@ const HeaderClient = ({ categories }: HeaderClientProps) => {
                 <CiUser size={20} />
               </div>
               <span className="text-sm font-bold">My Profile</span>
+            </Link>
+            <Link
+              href="/account/orders"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-4 px-3 py-3 rounded-2xl text-gray-700 hover:bg-gray-50 transition-all"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiPackage size={20} />
+              </div>
+              <span className="text-sm font-bold">My Orders</span>
+            </Link>
+            <Link
+              href="/account/addresses"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-4 px-3 py-3 rounded-2xl text-gray-700 hover:bg-gray-50 transition-all"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiMapPin size={20} />
+              </div>
+              <span className="text-sm font-bold">Manage Addresses</span>
             </Link>
             <Link
               href="/wishlist"

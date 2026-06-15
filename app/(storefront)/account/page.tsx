@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, Loader2, CheckCircle2, ShieldCheck, X } from "lucide-react";
+import { FiMapPin, FiPackage, FiStar } from "react-icons/fi";
 import { useCustomerStore } from "@/lib/store/useCustomerStore";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const { customer, isLoading, fetchMe, updateProfile, sendMobileChangeOTP, verifyMobileChange, sendDeleteAccountOTP, verifyDeleteAccount } = useCustomerStore();
@@ -146,6 +148,38 @@ export default function ProfilePage() {
       </div>
 
       <div className="space-y-8">
+        {/* Mobile Quick Nav */}
+        <div className="grid grid-cols-2 gap-3 mb-8 md:hidden">
+          <Link 
+            href="/account/orders"
+            className="flex flex-col items-center justify-center p-4 bg-[#F5F5F5] rounded-2xl border border-[#CCCCCC]/20 hover:bg-white hover:border-amber-500/30 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center mb-2 shadow-sm group-hover:bg-amber-50">
+              <FiPackage size={18} className="text-[#222222] group-hover:text-amber-500" />
+            </div>
+            <span className="text-[11px] font-bold text-[#222222] uppercase tracking-wider">My Orders</span>
+          </Link>
+          <Link 
+            href="/account/addresses"
+            className="flex flex-col items-center justify-center p-4 bg-[#F5F5F5] rounded-2xl border border-[#CCCCCC]/20 hover:bg-white hover:border-amber-500/30 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center mb-2 shadow-sm group-hover:bg-amber-50">
+              <FiMapPin size={18} className="text-[#222222] group-hover:text-amber-500" />
+            </div>
+            <span className="text-[11px] font-bold text-[#222222] uppercase tracking-wider">Addresses</span>
+          </Link>
+          <Link 
+            href="/account/reviews"
+            className="flex flex-col items-center justify-center p-4 bg-[#F5F5F5] rounded-2xl border border-[#CCCCCC]/20 hover:bg-white hover:border-amber-500/30 transition-all group col-span-2"
+          >
+            <div className="w-full flex items-center justify-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:bg-amber-50">
+                <FiStar size={18} className="text-[#222222] group-hover:text-amber-500" />
+              </div>
+              <span className="text-[11px] font-bold text-[#222222] uppercase tracking-wider">My Reviews</span>
+            </div>
+          </Link>
+        </div>
         {/* Basic Info */}
         {!isDeleting && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

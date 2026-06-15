@@ -183,8 +183,8 @@ export default function OrdersPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col md:items-end">
-                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-widest mb-0.5 text-right">Order Total</p>
+                    <div className="flex flex-col items-start md:items-end">
+                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-widest mb-0.5 md:text-right">Order Total</p>
                       <p className="text-xl font-bold text-[#222222]">₹{order.totalAmount.toLocaleString()}</p>
                       {order.orderStatus === "processing" && (
                         <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-bold text-amber-500 uppercase tracking-wider bg-amber-500/5 px-2.5 py-1 rounded-full">

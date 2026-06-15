@@ -64,19 +64,20 @@ interface UIOrder {
   paidAmount?: number;
   remainingPaidAmount?: number;
   refundId?: string;
+  statusHistory?: any[];
   items: UIOrderItem[];
-}
+  }
 
-type TabStatus = 'All order' | 'Completed' | 'Pending' | 'Processing' | 'Canceled';
+  type TabStatus = 'All order' | 'Completed' | 'Pending' | 'Processing' | 'Canceled';
 
-const STATUS_TAB_MAPPING: Record<Exclude<TabStatus, 'All order'>, OrderStatusType[]> = {
+  const STATUS_TAB_MAPPING: Record<Exclude<TabStatus, 'All order'>, OrderStatusType[]> = {
   'Completed': ['delivered'],
   'Pending': ['pending_payment', 'payment_failed', 'payment_expired'],
   'Processing': ['processing'],
   'Canceled': ['cancelled', 'returned'],
-};
+  };
 
-const STATUS_COLORS: Record<string, string> = {
+  const STATUS_COLORS: Record<string, string> = {
   pending_payment: 'text-orange-500',
   processing: 'text-[#4EA674]',
   shipped: 'text-[#6467F2]',
@@ -85,9 +86,9 @@ const STATUS_COLORS: Record<string, string> = {
   returned: 'text-[#FF6B6B]',
   payment_failed: 'text-[#FF6B6B]',
   payment_expired: 'text-[#FF6B6B]',
-};
+  };
 
-const STATUS_LABELS: Record<string, string> = {
+  const STATUS_LABELS: Record<string, string> = {
   pending_payment: 'Pending',
   processing: 'Processing',
   shipped: 'Shipped',
@@ -96,26 +97,26 @@ const STATUS_LABELS: Record<string, string> = {
   returned: 'Returned',
   payment_failed: 'Payment Failed',
   payment_expired: 'Payment Expired',
-};
+  };
 
-// Mock filter options
-const brands = ['Pahadi Collections', 'Tanishq', 'CaratLane', 'Malabar', 'Kalyan', 'Reliance Jewels'];
-const categories = [
-  'Necklaces', 'Earrings', 'Rings', 'Bangles', 'Bracelets', 
+  // Mock filter options
+  const brands = ['Pahadi Collections', 'Tanishq', 'CaratLane', 'Malabar', 'Kalyan', 'Reliance Jewels'];
+  const categories = [
+  'Necklaces', 'Earrings', 'Rings', 'Bangles', 'Bracelets',
   'Anklets', 'Pendants', 'Nose Pins', 'Jewellery Sets', 'Others'
-];
+  ];
 
-// ============================================================================
-// Transform API data to UI format
-// ============================================================================
+  // ============================================================================
+  // Transform API data to UI format
+  // ============================================================================
 
-function transformOrder(apiOrder: Order, index: number): UIOrder {
+  function transformOrder(apiOrder: Order, index: number): UIOrder {
   const statusRaw = apiOrder.orderStatusRaw || apiOrder.orderStatus;
   const statusKey = statusRaw.toLowerCase().replace(/ /g, '_');
 
   return {
     id: apiOrder._id || `order-${index}`,
-    orderId: apiOrder.orderId || `#${apiOrder._id?.slice(0, 2).toUpperCase()}${apiOrder._id?.slice(-2).toUpperCase() || 'XX'}`,
+    orderId: apiOrder.orderId,
     customer: apiOrder.customerName || 'Unknown',
     customerPhone: apiOrder.customerPhone || 'N/A',
     date: formatOrderDate(apiOrder.createdAt),
@@ -133,6 +134,7 @@ function transformOrder(apiOrder: Order, index: number): UIOrder {
     paidAmount: (apiOrder as any).paidAmount || 0,
     remainingPaidAmount: (apiOrder as any).remainingPaidAmount || 0,
     refundId: (apiOrder as any).refundId,
+    statusHistory: apiOrder.statusHistory,
     items: apiOrder.items.map((item, idx) => ({
       id: item._id || `${apiOrder._id}-${idx}`,
       title: item.snapshot?.title || item.title || 'Unknown Product',
@@ -1174,6 +1176,20 @@ export default function OrdersPage() {
                                <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600 rounded inline-block w-fit">
                                   {item.itemStatus.replace(/_/g, ' ')}
                                </div>
+                               
+                               {/* Display Cancellation Reason */}
+                               {(item.itemStatus === 'cancelled' || order.statusRaw === 'cancelled') && (
+                                 <div className="mt-1 p-2 bg-red-50 border border-red-100 rounded text-[11px]">
+                                   <span className="font-bold text-red-600 uppercase text-[9px] block mb-0.5">Cancellation Reason:</span>
+                                   <p className="text-red-700 italic">
+                                     {order.statusHistory?.find(h => 
+                                       (h.status.toLowerCase().includes('cancel') || h.status.toLowerCase().includes('refund_pending')) && 
+                                       h.comment
+                                     )?.comment || 'No reason provided'}
+                                   </p>
+                                 </div>
+                               )}
+
                                {(item.itemStatus === 'cancelled' || item.itemStatus === 'returned') && order.payment.toLowerCase() === 'razorpay' && (
                                  <div className="mt-1">
                                    {(item.refundStatus === 'processed' || order.paymentStatus === 'refunded') ? (

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { IoHeart, IoHeartOutline } from "react-icons/io5";
-import { FiShoppingBag } from "react-icons/fi";
+import { FiShoppingBag, FiMinus, FiPlus } from "react-icons/fi";
 import { Product } from "@/lib/services/product";
 import { useWishlistStore } from "@/lib/store/useWishlistStore";
 import { useCartStore } from "@/lib/store/useCartStore";
@@ -56,6 +56,9 @@ const ProductCard = ({
   const isPending = useWishlistStore((state) => state.pendingToggles.has(wishlistVariantId));
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
   const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const cartItems = useCartStore((state) => state.items);
+  const cartItem = cartItems.find((item) => item.variantId === wishlistVariantId);
 
   const stockValue = (wishlistVariantId as any).stocks ?? (wishlistProduct as any).stock;
   const isOutOfStock = (stockValue !== undefined && stockValue <= 0) || wishlistProduct.isActive === false;
@@ -145,13 +148,32 @@ const ProductCard = ({
 
         {!isOutOfStock && (
           <div className="absolute bottom-4 left-1/2 hidden w-[88%] -translate-x-1/2 translate-y-20 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 md:block">
-            <button 
-              onClick={handleAddToCart}
-              className="flex w-full items-center justify-center gap-3 rounded-xl py-2 text-lg font-semibold text-white transition-all duration-300 bg-[#b98b5f] hover:bg-[#a67a52]"
-            >
-              <FiShoppingBag className="text-xl" />
-              Quick Add
-            </button>
+            {cartItem ? (
+              <div className="flex w-full items-center justify-between rounded-xl py-2 px-4 text-white bg-[#b98b5f]">
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(wishlistVariantId!, cartItem.quantity - 1); }}
+                  className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <FiMinus size={20} />
+                </button>
+                <span className="text-xl font-bold">{cartItem.quantity}</span>
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(wishlistVariantId!, cartItem.quantity + 1); }}
+                  disabled={cartItem.quantity >= (stockValue || 99)}
+                  className="p-1 hover:bg-white/20 rounded-full transition-colors disabled:opacity-30"
+                >
+                  <FiPlus size={20} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleAddToCart}
+                className="flex w-full items-center justify-center gap-3 rounded-xl py-2 text-lg font-semibold text-white transition-all duration-300 bg-[#b98b5f] hover:bg-[#a67a52]"
+              >
+                <FiShoppingBag className="text-xl" />
+                Quick Add
+              </button>
+            )}
           </div>
         )}
       </Link>
@@ -207,13 +229,32 @@ const ProductCard = ({
 
         {/* Mobile Quick Add Button */}
         {!isOutOfStock && (
-          <button 
-            onClick={handleAddToCart}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-white md:hidden bg-[#b98b5f]"
-          >
-            <FiShoppingBag className="text-lg" />
-            Quick Add
-          </button>
+          cartItem ? (
+            <div className="mt-3 flex w-full items-center justify-between rounded-lg py-2 px-4 text-white bg-[#b98b5f] md:hidden">
+              <button 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(wishlistVariantId!, cartItem.quantity - 1); }}
+                className="p-1 hover:bg-white/10 rounded-full"
+              >
+                <FiMinus size={16} />
+              </button>
+              <span className="text-sm font-bold">{cartItem.quantity}</span>
+              <button 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(wishlistVariantId!, cartItem.quantity + 1); }}
+                disabled={cartItem.quantity >= (stockValue || 99)}
+                className="p-1 hover:bg-white/10 rounded-full disabled:opacity-30"
+              >
+                <FiPlus size={16} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={handleAddToCart}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-white md:hidden bg-[#b98b5f]"
+            >
+              <FiShoppingBag className="text-lg" />
+              Quick Add
+            </button>
+          )
         )}
       </div>
     </div>

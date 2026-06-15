@@ -7,6 +7,7 @@ import ProgressProvider from "@/components/providers/ProgressProvider";
 import { Toaster } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Suspense } from "react";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -54,7 +55,9 @@ export default function StorefrontLayout({
         <ProgressProvider>
           <QueryProvider>
             <CartSyncProvider />
-            <Header />
+            <Suspense fallback={<div className="h-16 w-full animate-pulse bg-gray-50" />}>
+              <Header />
+            </Suspense>
             {children}
             <Footer />
           </QueryProvider>

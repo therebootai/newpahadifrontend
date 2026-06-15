@@ -153,6 +153,68 @@ function ReturnModal({ isOpen, onClose, onConfirm, item, pickupAddress, isPendin
   );
 }
 
+interface CancelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  title: string;
+  message: string;
+  isLoading: boolean;
+}
+
+function CancelReasonModal({ isOpen, onClose, onConfirm, title, message, isLoading }: CancelModalProps) {
+  const [reason, setReason] = useState('');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-xl font-bold text-[#222222]">{title}</h2>
+            <button onClick={onClose} className="p-1 hover:bg-[#F5F5F5] rounded-lg transition-colors">
+              <FiXCircle size={20} className="text-[#BBBBBB]" />
+            </button>
+          </div>
+          
+          <p className="text-[#666666] text-sm mb-6 leading-relaxed">
+            {message}
+          </p>
+
+          <div className="mb-8">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Reason for Cancellation (Required)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Please tell us why you're cancelling..."
+              className="w-full bg-gray-50 border border-[#CCCCCC]/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button 
+              disabled={isLoading}
+              onClick={onClose}
+              className="flex-1 py-3 border border-[#CCCCCC]/30 rounded-xl text-[12px] uppercase tracking-widest font-bold text-[#222222] hover:bg-[#F5F5F5] transition-all disabled:opacity-50"
+            >
+              No, Keep It
+            </button>
+            <button 
+              disabled={isLoading || !reason.trim()}
+              onClick={() => onConfirm(reason)}
+              className="flex-1 py-3 rounded-xl text-[12px] uppercase tracking-widest font-bold text-white transition-all shadow-lg flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 shadow-amber-200 disabled:opacity-50"
+            >
+              {isLoading ? <FiLoader className="animate-spin" /> : 'Yes, Cancel'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const OrderDetailsPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -186,11 +248,11 @@ const OrderDetailsPage = () => {
     fetchOrder();
   }, [params.id]);
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrder = async (reason: string) => {
     if (!order) return;
     setCancelling(true);
     try {
-      await shopOrderApi.cancel(order._id, "Cancelled by user from order details page");
+      await shopOrderApi.cancel(order._id, reason);
       toast.success("Order cancelled successfully");
       setShowCancelModal(false);
       fetchOrder();
@@ -201,11 +263,11 @@ const OrderDetailsPage = () => {
     }
   };
 
-  const handleCancelItem = async () => {
+  const handleCancelItem = async (reason: string) => {
     if (!order || !cancelItemModal) return;
     setCancelling(true);
     try {
-      await shopOrderApi.cancelOrderItem(order._id, cancelItemModal.itemId, "Cancelled by user from order details page");
+      await shopOrderApi.cancelOrderItem(order._id, cancelItemModal.itemId, reason);
       toast.success("Item cancelled successfully");
       setCancelItemModal(null);
       fetchOrder();
@@ -599,25 +661,21 @@ const OrderDetailsPage = () => {
         </div>
       </div>
 
-      <ConfirmModal
+      <CancelReasonModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleCancelOrder}
         title="Cancel Order"
         message="Are you sure you want to cancel this order? This action cannot be undone."
-        confirmText="Yes, Cancel"
-        cancelText="No, Keep It"
         isLoading={cancelling}
       />
 
-      <ConfirmModal
+      <CancelReasonModal
         isOpen={!!cancelItemModal}
         onClose={() => setCancelItemModal(null)}
         onConfirm={handleCancelItem}
         title="Cancel Item"
         message={`Are you sure you want to cancel "${cancelItemModal?.title}"? This action cannot be undone.`}
-        confirmText="Yes, Cancel Item"
-        cancelText="No, Keep It"
         isLoading={cancelling}
       />
 
