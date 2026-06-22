@@ -349,7 +349,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
         <div className="grid grid-cols-1 lg:grid-cols-[40%_60%] gap-8 xl:gap-12 items-start relative">
           
           {/* LEFT COLUMN: VISUALS (Sticky on Desktop) */}
-          <div className="w-full xl:sticky xl:top-24 z-30">
+          <div className="w-full xl:sticky xl:top-40 z-30">
             {/* Mobile View */}
             <div className="xl:hidden">
               <div className="relative mx-auto max-w-full overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100">
@@ -566,7 +566,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                   />
                 ))}
               </div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-600 min-[1920px]:text-[12px] min-[1920px]:text-semibold uppercase tracking-widest">
                 {productRating} Ratings & {productReviews} Reviews
               </p>
             </div>
@@ -664,7 +664,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
 
             <div className="mt-4">
               <div
-                className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest ${
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-[10px] min-[1920px]:text-sm min-[1920px]:text-semibold font-bold uppercase ${
                   hasReturnPolicy
                     ? "bg-blue-50 text-blue-700 border border-blue-100"
                     : "bg-gray-50 text-gray-500 border border-gray-100"
@@ -678,13 +678,13 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             {/* ACCORDION SECTION */}
             <div className="pt-3 space-y-3">
               {[
-                { id: "description", label: "Description", content: <div className="text-xs leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
+                { id: "description", label: "Description", content: <div className="text-xs min-[1920px]:text-lg min-[1920px]:leading-relaxed leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
                 { id: "specs", label: "Specifications", content: (
                   <div className="grid grid-cols-1 gap-2">
                     {(productDetails?.specs?.length ? productDetails.specs : [{ key: "Brand", value: "Pahadi Collections" }, { key: "SKU", value: currentVariant?.sku || "N/A" }]).map((spec) => (
-                      <div key={spec.key} className="flex justify-between p-3 rounded-md bg-gray-50/50 border border-gray-200">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">{spec.key}</span>
-                        <span className="text-[10px] text-gray-900">{spec.value}</span>
+                      <div key={spec.key} className="flex justify-between p-3 min-[1920px]:p-4 rounded-md bg-gray-50/50 border border-gray-200">
+                        <span className="text-[10px] min-[1920px]:text-lg font-semibold text-gray-600 uppercase">{spec.key}</span>
+                        <span className="text-[10px] min-[1920px]:text-lg text-gray-900">{spec.value}</span>
                       </div>
                     ))}
                   </div>
@@ -700,7 +700,7 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
                     onClick={() => toggleAccordion(item.id)}
                     className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-all"
                   >
-                    <span className="text-[12px] font-semibold text-gray-900 uppercase tracking-widest">{item.label}</span>
+                    <span className="text-[12px] min-[1920px]:text-[14px] font-semibold text-gray-900 uppercase tracking-widest">{item.label}</span>
                     {activeAccordion === item.id ? <FiChevronUp /> : <FiChevronDown />}
                   </button>
                   {activeAccordion === item.id && <div className="p-4 pt-0 border-t border-gray-50">{item.content}</div>}

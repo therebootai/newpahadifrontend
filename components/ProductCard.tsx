@@ -210,18 +210,18 @@ const ProductCard = ({
 
         <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-2">
 
-          <p className="text-base font-bold text-[#5f4339] sm:text-xl">
+          <p className="md:text-base text-[12px] font-bold text-[#5f4339] sm:text-xl">
             {price}
           </p>
 
           {oldPrice && (
-            <p className="text-xs text-gray-400 line-through sm:text-base">
+            <p className="md:text-xs text-[10px] text-gray-400 line-through sm:text-base">
               {oldPrice}
             </p>
           )}
 
           {discount && (
-            <p className="text-xs font-semibold text-green-600">
+            <p className="md:text-xs text-[9px] font-semibold text-green-600">
               {discount}
             </p>
           )}

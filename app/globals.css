@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: "RupeeSystem";
-  src: local("Inter"), local("Segoe UI"), local("Roboto"), local("Arial"), local("sans-serif");
+  src: local("Inter"), local("Segoe UI"), local("Roboto"), local("Helvetica Neue"), local("Helvetica"), local("Arial");
   unicode-range: U+20B9;
 }
 

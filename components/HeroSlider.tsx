@@ -11,11 +11,19 @@ import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/effect-fade";
 
+import { useEffect, useState } from "react";
+
 const HeroSlider = () => {
   const { data, isLoading } = useStorefrontData();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const banners = data?.banners || [];
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <div className="w-full pb-1">
         <Skeleton className="h-87.5 md:h-130 w-full md:rounded-3xl rounded-none" />

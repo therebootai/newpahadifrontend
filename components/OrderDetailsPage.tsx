@@ -367,7 +367,7 @@ const OrderDetailsPage = () => {
             </button>
           )}
 
-          {(order.orderStatus === 'processing' || order.orderStatus === 'pending_payment' || order.orderStatus === 'shipped') && (
+          {(order.orderStatus === 'processing' || order.orderStatus === 'pending_payment') && (!order.shipments || order.shipments?.length === 0) && (
             <button 
               onClick={() => setShowCancelModal(true)}
               className="px-4 py-2 bg-white border border-red-100 text-red-600 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-red-50 transition-colors"

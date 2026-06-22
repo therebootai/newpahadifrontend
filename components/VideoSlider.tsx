@@ -7,11 +7,19 @@ import { Skeleton } from "./ui/Skeleton";
 
 import "swiper/css";
 
+import { useEffect, useState } from "react";
+
 const VideoSlider = () => {
   const { data, isLoading } = useStorefrontData();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const videos = data?.videos || [];
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <section className="w-full py-12">
         <div className="mb-8">
