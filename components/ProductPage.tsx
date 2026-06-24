@@ -678,13 +678,13 @@ const ProductPage = ({ product, variant, similarProducts = [] }: ProductPageProp
             {/* ACCORDION SECTION */}
             <div className="pt-3 space-y-3">
               {[
-                { id: "description", label: "Description", content: <div className="text-xs min-[1920px]:text-lg min-[1920px]:leading-relaxed leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
+                { id: "description", label: "Description", content: <div className="text-xs md:text-[14px] min-[1920px]:text-lg min-[1920px]:leading-relaxed leading-loose text-gray-600" dangerouslySetInnerHTML={{ __html: description }} /> },
                 { id: "specs", label: "Specifications", content: (
                   <div className="grid grid-cols-1 gap-2">
                     {(productDetails?.specs?.length ? productDetails.specs : [{ key: "Brand", value: "Pahadi Collections" }, { key: "SKU", value: currentVariant?.sku || "N/A" }]).map((spec) => (
                       <div key={spec.key} className="flex justify-between p-3 min-[1920px]:p-4 rounded-md bg-gray-50/50 border border-gray-200">
-                        <span className="text-[10px] min-[1920px]:text-lg font-semibold text-gray-600 uppercase">{spec.key}</span>
-                        <span className="text-[10px] min-[1920px]:text-lg text-gray-900">{spec.value}</span>
+                        <span className="text-[10px] md:text-[12px] min-[1920px]:text-lg font-semibold text-gray-600 uppercase">{spec.key}</span>
+                        <span className="text-[10px] md:text-[12px] min-[1920px]:text-lg text-gray-900">{spec.value}</span>
                       </div>
                     ))}
                   </div>
